@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if type fish > /dev/null 2>&1; then
+  ln -sf "$PWD" "$HOME/.config/fish"
+else
+  echo "Fish is not installed. Please install and try again."
+fi
+

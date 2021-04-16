@@ -1,0 +1,23 @@
+#!/bin/sh
+
+ln -sf "$PWD/bashrc" "$HOME/.bashrc"
+ln -sf "$PWD/shell.d" "$HOME/.shell.d"
+ln -sf "$PWD/dircolors/dircolors" "$HOME/.dircolors"
+ln -sf "$PWD/inputrc" "$HOME/.inputrc"
+ln -sf "$PWD/profile" "$HOME/.profile"
+ln -sf "$PWD/xinitrc" "$HOME/.xinitrc"
+ln -sf "$PWD/bspwmrc" "$HOME/.config/bspwm/bspwmrc"
+ln -sf "$PWD/sxhkdrc" "$HOME/.config/sxhkd/sxhkdrc"
+
+[ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
+ln -sf "$PWD/scripts" "$HOME/.local/bin/scripts"
+# ln -sf "$PWD/bin/linux/x86_64/tmux" "$HOME/.local/bin/tmux"
+ln -sf "$PWD/bin/linux/x86_64/gh" "$HOME/.local/bin/gh"
+
+for i in alacritty fish gh lynx polybar qtile tmux vim dmenu; do 
+  cd $i && ./setup; cd -
+done
+
+echo "Setup complete"
+
+exit

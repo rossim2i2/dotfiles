@@ -1,0 +1,83 @@
+# 
+# ___  ____      _                _  ______              _ 
+# |  \/  (_)    | |              | | | ___ \            (_)
+# | .  . |_  ___| |__   __ _  ___| | | |_/ /___  ___ ___ _ 
+# | |\/| | |/ __| '_ \ / _` |/ _ \ | |    // _ \/ __/ __| |
+# | |  | | | (__| | | | (_| |  __/ | | |\ \ (_) \__ \__ \ |
+# \_|  |_/_|\___|_| |_|\__,_|\___|_| \_| \_\___/|___/___/_|
+#                                                          
+#                                                          
+
+# Archive extraction
+
+function extract {
+ if [ -z "$1" ]; then
+    # display usage if no parameters given
+    echo "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
+    echo "       extract <path/file_name_1.ext> [path/file_name_2.ext] [path/file_name_3.ext]"
+ else
+    for n in "$@"
+    do
+      if [ -f "$n" ] ; then
+          case "${n%,}" in
+            *.cbt|*.tar.bz2|*.tar.gz|*.tar.xz|*.tbz2|*.tgz|*.txz|*.tar)                                   tar xvf "$n"       ;;
+            *.lzma)                                                                                       unlzma ./"$n"      ;;
+            *.bz2)                                                                                        bunzip2 ./"$n"     ;;
+            *.cbr|*.rar)                                                                                  unrar x -ad ./"$n" ;;
+            *.gz)                                                                                         gunzip ./"$n"      ;;
+            *.cbz|*.epub|*.zip)                                                                           unzip ./"$n"       ;;
+            *.z)                                                                                          uncompress ./"$n"  ;;
+            *.7z|*.arj|*.cab|*.cb7|*.chm|*.deb|*.dmg|*.iso|*.lzh|*.msi|*.pkg|*.rpm|*.udf|*.wim|*.xar)     7z x ./"$n"        ;;
+            *.xz)                                                                                         unxz ./"$n"        ;;
+            *.exe)                                                                                        cabextract ./"$n"  ;;
+            *.cpio)                                                                                       cpio -id < ./"$n"  ;;
+            *.cba|*.ace)                                                                                  unace x ./"$n"      ;;
+            *)
+                         echo "extract: '$n' - unknown archive method"
+                         return 1
+                         ;;
+          esac
+      else
+          echo "'$n' - file does not exist"
+          return 1
+      fi
+    done
+fi
+}
+
+# Switch tmux session
+function fs {
+  tmux list-sessions -F "#{session_name}" | fzf | read -l result; and tmux switch-client -t "$result"
+}
+
+# Fuzzy-find ssh host via ag and ssh into it
+function fssh {
+  ag --ignore-case '^host [^*]' ~/.ssh/config | cut -d ' ' -f 2 | fzf | read -l result; and ssh "$result"
+}
+
+# CD Backwards
+function fzf-bcd-widget {
+	pwd | awk -v RS=/ '/\n/ {exit} {p=p $0 "/"; print p}' | tac | eval (__fzfcmd) +m --select-1 --exit-0 $FZF_BCD_OPTS | read -l result
+	[ "$result" ]; and cd $result
+	commandline -f repaint
+}
+
+# fzf commandline job and print unescaped selection back to commandline
+function fzf-select {
+	set -l cmd (commandline -j)
+	[ "$cmd" ]; or return
+	eval $cmd | eval (__fzfcmd) -m --tiebreak=index --select-1 --exit-0 | string join ' ' | read -l result
+	[ "$result" ]; and commandline -j -- $result
+	commandline -f repaint
+}
+
+# find packages in pacman
+function pacfind {
+    pacman -Slq | fzf --multi --preview 'cat <(pacman -Si $argv) <(pacman -Fl $argv | awk "{print \$2}")' | xargs -ro sudo pacman -S
+}
+
+# search pacman for files to remove
+function pacout {
+    pacman -Qq | fzf --multi --preview 'pacman -Qi $argv' | xargs -ro sudo pacman -Rns
+}
+

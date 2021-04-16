@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if type alacritty > /dev/null 2>&1; then
+  ln -sf "$PWD/alacritty.yml" "$HOME/.config/alacritty/alacritty.yml"
+else
+  echo "Alacritty is not installed. Please install and try again."
+fi
+

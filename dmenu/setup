@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if type dmenu > /dev/null 2>&1; then
+  ln -sf "$PWD" "$HOME/.dmenu"
+else
+  echo "dmenu not installed. Please install and try again."
+fi
+
