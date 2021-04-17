@@ -1,0 +1,6 @@
+#!/bin/bash
+
+sudo pacman -S alacritty exa qtile tmux vim lynx
+
+source "$PATH/install-gh"
+
