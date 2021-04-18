@@ -8,6 +8,7 @@ ln -sf "$PWD/profile" "$HOME/.profile"
 ln -sf "$PWD/xinitrc" "$HOME/.xinitrc"
 ln -sf "$PWD/bspwmrc" "$HOME/.config/bspwm/bspwmrc"
 ln -sf "$PWD/sxhkdrc" "$HOME/.config/sxhkd/sxhkdrc"
+ln -sf "$PWD/zshrc" "$HOME/.zshrc"
 
 [ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
 ln -sf "$PWD/scripts" "$HOME/.local/bin/scripts"

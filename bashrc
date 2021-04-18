@@ -1,8 +1,6 @@
 #!/usr/bin/bash
 export TERM="xterm-256color"              # getting proper colors
 export HISTCONTROL=ignoredups:erasedups   # no duplicate entries
-export GITUSER=rossim2i2
-export KN="$HOME/repos/github.com/rossim2i2/"
 
 # first whatever the system has (required for completion, etc.)
 if [ -e /etc/bashrc ]; then
@@ -27,17 +25,14 @@ source "$HOME/.shell.d/golang.sh"
 source "$HOME/.shell.d/aliases.sh"
 source "$HOME/.shell.d/envx.bash"
 
-export PATH="$HOME/.local/bin/scripts:$PATH"
-export PATH="$HOME/.config/lynx:$PATH"
-
 # not worried about sharing publicly
-#test -r ~/.bash_personal && source ~/.bash_personal
+test -r ~/.bash_personal && source ~/.bash_personal
 
 # sensitive configurations
-#test -r ~/.bash_private && source ~/.bash_private
+test -r ~/.bash_private && source ~/.bash_private
 
 # primarily added for HTTP_PROXY and such
-#test -r ~/.bash_work && source ~/.bash_work
+test -r ~/.bash_work && source ~/.bash_work
 
 #set the default prompt
 ps1min
