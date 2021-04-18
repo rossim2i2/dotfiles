@@ -36,8 +36,12 @@ keys = [
              desc='Run Launcher'
              ),
          Key([mod], "Tab",
-             lazy.next_layout(),
+             lazy.next_stack(),
              desc='Toggle through layouts'
+             ),
+         Key([mod, "shift"], "Tab",
+             lazy.layout.down(),
+             desc='Toggle through stacks'
              ),
          Key([mod, "shift"], "c",
              lazy.window.kill(),
@@ -268,7 +272,7 @@ layout_theme = {"border_width": 2,
 layouts = [
     layout.MonadWide(**layout_theme),
     #layout.Bsp(**layout_theme),
-    #layout.Stack(stacks=2, **layout_theme),
+    layout.Stack(stacks=2, **layout_theme),
     layout.Columns(num_columns = 3, **layout_theme),
     #layout.RatioTile(**layout_theme),
     #layout.VerticalTile(**layout_theme),
