@@ -36,11 +36,11 @@ keys = [
              desc='Run Launcher'
              ),
          Key([mod], "Tab",
-             lazy.next_stack(),
+             lazy.layout.down(),
              desc='Toggle through layouts'
              ),
          Key([mod, "shift"], "Tab",
-             lazy.layout.down(),
+             lazy.layout.client_to_next(),
              desc='Toggle through stacks'
              ),
          Key([mod, "shift"], "c",
@@ -263,7 +263,7 @@ for i, (name, kwargs) in enumerate(group_names, 1):
     keys.append(Key([mod], str(i), lazy.group[name].toscreen()))        # Switch to another group
     keys.append(Key([mod, "shift"], str(i), lazy.window.togroup(name))) # Send current window to another group
 
-layout_theme = {"border_width": 2,
+layout_theme = {"border_width": 1,
                 "margin": 6,
                 "border_focus": "e1acff",
                 "border_normal": "1D2330"
