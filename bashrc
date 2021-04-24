@@ -34,5 +34,8 @@ test -r ~/.bash_private && source ~/.bash_private
 # primarily added for HTTP_PROXY and such
 test -r ~/.bash_work && source ~/.bash_work
 
-#set the default prompt
-ps1min
+# set the default prompt
+# if on an ssh session, use the normal prompt
+# if on main pc, use the minimal prompt
+if [ -z "$SSH_CLIENT" ] && [ -z "$SSH_TTY" ]; then ps1min; fi
+
