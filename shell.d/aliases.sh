@@ -11,8 +11,6 @@ alias '??'=google
 alias '???'=bing
 alias x="exit"
 alias sl="sl -e"
-alias tmpd='cd $(mktemp -d)'
-alias mkdirisosec='d=$(isosec);mkdir $d; cd $d'
 
 alias free='free -h'
 alias df='df -h'
@@ -21,12 +19,12 @@ alias top="htop"
 ## pacman and paru
 alias pacup='sudo pacman -Syu'                    # update standard packages
 alias parup='paru -Syu'                           # update aur pakcages
-#alias paclean='sudo pacman -Rns (pacman -Qtqd)'   # remove orphaned packages
-alias paclean='pacman -Qtqd | sudo pacman -Rns'   # remove orphaned packages
+alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
 
 ## Shutdown
 alias ssn='sudo shutdown now'
 
+# used for bare repo (no longer used)
 alias config='/usr/bin/git --git-dir=$HOME/dev/dotfiles/ --work-tree=$HOME'
 
 which vim &>/dev/null && alias vi=vim
