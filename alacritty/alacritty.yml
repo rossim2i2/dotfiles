@@ -25,13 +25,13 @@ tabspaces: 2
 font:
 
   normal:
-    family: "SauceCodePro Nerd Font"
+    family: "Ubuntu Mono Nerd Font"
   bold:
-    family: "SauceCodePro Nerd Font"
+    family: "Ubuntu Mono Nerd Font"
   italic:
-    family: "SauceCodePro Nerd Font"
+    family: "Ubuntu Mono Nerd Font"
   bold_italic:
-    family: "SauceCodePro Nerd Font"
+    family: "Ubuntu Mono Nerd Font"
 
   size: 11 
   offset:
