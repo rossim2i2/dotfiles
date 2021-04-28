@@ -1,0 +1,6 @@
+#!/bin/sh
+
+tmpfile=$(mktemp --suffix ".${1}")
+
+echo ${tmpfile}
+vim ${tmpfile}

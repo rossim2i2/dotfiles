@@ -171,9 +171,20 @@ cursor:
 
 live_config_reload: true
 
+scrolling:
+
+  history: 5000
+
+key_bindings:
+  - { key: PageUp,    mods: None,          action: ScrollPageUp,   mode: ~Alt  }
+  - { key: PageDown,  mods: None,          action: ScrollPageDown, mode: ~Alt  }
+  - { key: Home,      mods: Shift,         action: ScrollToTop,    mode: ~Alt  }
+  - { key: End,       mods: Shift,         action: ScrollToBottom, mode: ~Alt  }
+
 debug:
   render_timer: false
   persistent_logging: false
   log_level: off
   print_events: false
   ref_test: false
+
