@@ -30,7 +30,7 @@ declare -a commands=( toc imagelinks)
 
 if [ -n "$COMP_LINE" ]; then
   pre=${COMP_LINE#* }
-  for cmd in ${commands[@]}; do 
+  for cmd in ${commands[@]}; do
     [[ $cmd =~ ^$pre ]] && echo $cmd
   done
   exit 0

@@ -29,22 +29,28 @@ set shiftwidth=2
 set smartindent
 set smarttab
 
-if v:version >= 800 
-  " stop vim from silently fucking with files that it shouldn't 
+if v:version >= 800
+  " stop vim from silently fucking with files that it shouldn't
   set nofixendofline
 
   " better list chars
-  set listchars=tab:→\ ,eol:↲,nbsp:␣,space:·,trail:·,extends:⟩,precedes:⟨
+  " set listchars=tab:→\ ,eol:↲,nbsp:␣,space:·,trail:·,extends:⟩,precedes:⟨
+
+  " better ascii friendly listchars
+  set listchars=space:*,trail:*,nbsp:*,extends:>,precedes:<,tab:\|>
 
   " i fucking hate automatic folding
   set foldmethod=manual
 endif
 
+" mark trailing spaces as errors
+match ErrorMsg '\s\+$'
+
 " replace tabs with spaces automatically
 set expandtab
 
 " enough for line numbers + gutter within 80 standard
-set textwidth=72 
+set textwidth=72
 
 " disable relative line numbers, remove no to sample it
 set number relativenumber
@@ -64,16 +70,15 @@ set icon
 " center the cursor always on the screen
 "set scrolloff=999
 
-" highlight search hits,  \+<cr> to clear 
+" highlight search hits,  \+<cr> to clear
 set hlsearch
 set incsearch
 set linebreak
 map <silent> <leader><cr> :noh<cr>:redraw!<cr>
 
 " avoid most of the 'Hit Enter ...' messages
-"set shortmess=aoOtIF 
+"set shortmess=aoOtIF
 set shortmess=aoOtI
-
 
 " prevents truncated yanks, deletes, etc.
 set viminfo='20,<1000,s1000
@@ -81,7 +86,6 @@ set viminfo='20,<1000,s1000
 " not a fan of bracket matching or folding
 let g:loaded_matchparen=1
 set noshowmatch
-
 
 " Just the defaults, these are changed per filetype by plugins.
 " Most of the utility of all of this has been superceded by the use of
@@ -111,7 +115,6 @@ if $PLATFORM == 'mac'
   " required for mac delete to work
   set backspace=indent,eol,start
 endif
-
 
 " stop complaints about switching buffer with changes
 set hidden
@@ -145,21 +148,16 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
 
   " load all the plugins
   call plug#begin('~/.vimplugins')
+  Plug 'z0mbix/vim-shfmt'
   Plug 'sheerun/vim-polyglot'
   Plug 'vim-pandoc/vim-pandoc'
   Plug 'rwxrob/vim-pandoc-syntax-simple'
-  "Plug 'WolfgangMehner/bash-support' " borkish
-  "Plug 'vim-airline/vim-airline'
-  "Plug 'vim-airline/vim-airline-themes'
   Plug 'cespare/vim-toml'
   Plug 'pangloss/vim-javascript'
   Plug 'fatih/vim-go', { 'do': ':GoInstallBinaries' }
   Plug 'PProvost/vim-ps1'
   Plug 'tpope/vim-fugitive'
-  "Plug 'airblade/vim-gitgutter'
   Plug 'morhetz/gruvbox'
-  "Plug 'nielsmadan/harlequin'
-  "Plug 'tomasr/molokai'
   call plug#end()
 
 
@@ -204,6 +202,10 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
 
   "set statusline+=%m\ %F\ %y\ %{&fileencoding?&fileencoding:&encoding}\ %=%(C:%c\ L:%l\ %P%) 
   set cmdheight=1
+
+  " shell
+  let g:shfmt_fmt_on_save = 1
+  let g:shfmt_extra_args = '-i 2'
 
   " pandoc
   let g:pandoc#formatting#mode = 'h' " A'

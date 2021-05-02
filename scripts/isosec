@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Returns a unique time identifier using
+# YYYYmmddHHMMSS format.
+
+date -u +%Y%m%d%H%M%S
+

@@ -1,2 +1,3 @@
 #!/bin/sh
-exec wee 'https://github.com/rwxrob/rwxrob/tree/master/faq'
+exec open 'https://github.com/rwxrob/rwxrob/tree/master/faq'
+#exec wee 'https://github.com/rwxrob/rwxrob/tree/master/faq'
