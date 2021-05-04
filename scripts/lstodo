@@ -1,6 +1,0 @@
-#!/bin/sh
-
-git ls-files --full-name | grep "^2" | xargs git log --diff-filter=A --pretty=format:"%Cgreen%s" --name-only --
-
-#git ls-files --full-name | grep "^2" | xargs git log --diff-filter=A --pretty=format:"%Cgreen%s" --name-only -- | sed -z 's/\n\n//g;s/\n/ /g;s/.md/.md\n/g'
-

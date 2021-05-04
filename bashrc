@@ -7,6 +7,8 @@ if [ -e /etc/bashrc ]; then
     source /etc/bashrc
 fi
 
+complete -C zet zet
+
 source "$HOME/.shell.d/detection.sh"
 source "$HOME/.shell.d/git.sh"
 source "$HOME/.shell.d/git-prompt.sh"
