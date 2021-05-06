@@ -158,6 +158,7 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   Plug 'PProvost/vim-ps1'
   Plug 'tpope/vim-fugitive'
   Plug 'morhetz/gruvbox'
+  Plug 'roxma/vim-tmux-clipboard'
   call plug#end()
 
 
@@ -166,12 +167,12 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
     "let g:airline_symbols = {}
   "endif
 
-	"let g:airline_left_sep = "\uE0C4"  
-	"let g:airline_right_sep = "\uE0C5" 
-	"let g:airline_left_sep = "\uE0C6"
-	"let g:airline_right_sep = "\uE0C7" 
 	"let g:airline_left_sep = "\uE0C4"
-	"let g:airline_right_sep = "\uE0C5" 
+	"let g:airline_right_sep = "\uE0C5"
+	"let g:airline_left_sep = "\uE0C6"
+	"let g:airline_right_sep = "\uE0C7"
+	"let g:airline_left_sep = "\uE0C4"
+	"let g:airline_right_sep = "\uE0C5"
 
   "autocmd!
 
@@ -180,7 +181,7 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   hi Normal ctermbg=NONE " for transparent background
   hi SpellBad ctermbg=red " for transparent background
   hi SpellRare ctermbg=red
-  hi Special ctermfg=cyan 
+  hi Special ctermfg=cyan
   au FileType pandoc hi pandocAtxHeader ctermfg=yellow cterm=bold
   au FileType pandoc hi pandocAtxHeaderMark ctermfg=yellow cterm=bold
   au FileType pandoc hi pandocAtxStart ctermfg=yellow cterm=bold
@@ -192,7 +193,7 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
 
   set noruler
   "set rulerformat=%55(%f\ %y%r\ %l:%c\ %p%%%) "55 effective max
-  
+
   set laststatus=2
   set statusline=
   set statusline+=%*\ %<%.60F%*                      " path, trunc to 80 length
@@ -295,7 +296,7 @@ function! <SID>SynStack()
     return
   endif
     echo map(synstack(line('.'), col('.')), 'synIDattr(v:val, "name")')
-endfunc  
+endfunc
 
 " start at last place you were editing
 au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
