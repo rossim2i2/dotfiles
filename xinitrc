@@ -46,7 +46,7 @@ xset fp rehash
 picom &
 nm-applet &
 numlockx &
-setxkbmap -option caps:escape &
+#setxkbmap -option caps:escape &
 volumeicon &
 export AWT_TOOLKIT=MToolkit
 export QT_QPA_PLATFORMTHEME=qt5ct
