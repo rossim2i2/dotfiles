@@ -1,13 +1,3 @@
-# 
-# ___  ____      _                _  ______              _ 
-# |  \/  (_)    | |              | | | ___ \            (_)
-# | .  . |_  ___| |__   __ _  ___| | | |_/ /___  ___ ___ _ 
-# | |\/| | |/ __| '_ \ / _` |/ _ \ | |    // _ \/ __/ __| |
-# | |  | | | (__| | | | (_| |  __/ | | |\ \ (_) \__ \__ \ |
-# \_|  |_/_|\___|_| |_|\__,_|\___|_| \_| \_\___/|___/___/_|
-#                                                          
-#                                                          
-# -*- coding: utf-8 -*-
 import os
 import re
 import socket
@@ -26,7 +16,6 @@ myConfig = "/home/mike/.config/qtile/config.py"    # The Qtile config file locat
 keys = [
          ### The essentials
          Key([mod], "Return",
-             # lazy.spawn(myTerm+" -e zsh"),
              lazy.spawn(myTerm),
              desc='Launches My Terminal'
              ),
@@ -253,9 +242,8 @@ group_names = [("WWW", {'layout': 'monadtall'}),
                ("VBOX", {'layout': 'monadtall'}),
                ("CHAT", {'layout': 'monadtall'}),
                ("MUS", {'layout': 'monadtall'}),
-               ("VID", {'layout': 'monadtall'}),
+               ("VID", {'layout': 'floating'}),
                ("GFX", {'layout': 'floating'})]
-               #("WORK", {'layout': 'columns'})]
 
 groups = [Group(name, **kwargs) for name, kwargs in group_names]
 
@@ -282,37 +270,23 @@ layouts = [
     layout.Max(**layout_theme),
     #layout.Tile(shift_windows=True, **layout_theme),
     #layout.Stack(num_stacks=2),
-    layout.TreeTab(
-         font = "Ubuntu",
-         fontsize = 10,
-         sections = ["FIRST", "SECOND"],
-         section_fontsize = 11,
-         bg_color = "141414",
-         active_bg = "90C435",
-         active_fg = "000000",
-         inactive_bg = "384323",
-         inactive_fg = "a0a0a0",
-         padding_y = 5,
-         section_top = 10,
-         panel_width = 320
-         ),
     layout.Floating(**layout_theme)
 ]
 
-colors = [["#112730", "#112730"], # panel background
-          ["#234e61", "#234e61"], # background for current screen tab
-          ["#112730", "#112730"], # font color for group names
-          ["#f48858", "#f48858"], # border line color for current tab
-          ["#f458c4", "#f458c4"], # border line color for other tab and odd widgets
-          ["#58c4f4", "#58c4f4"], # color for the even widgets
-          ["#c4f458", "#c4f458"]] # window name
+colors = [["#0A1318", "#0A1318"], # panel background
+          ["#10303C", "#10303C"], # background for current screen tab
+          ["#EEEEEE", "#EEEEEE"], # font color for group names
+          ["#06175B", "#06175B"], # border line color for current tab
+          ["#5B0617", "#5B0617"], # border line color for other tab and odd widgets
+          ["#06175B", "#06175B"], # color for the even widgets
+          ["#238B09", "#238B09"]] # window name
 
 prompt = "{0}@{1}: ".format(os.environ["USER"], socket.gethostname())
 
 ##### DEFAULT WIDGET SETTINGS #####
 widget_defaults = dict(
-    font="Ubuntu Mono",
-    fontsize = 12,
+    font="Ubuntu Mono Nerd Font",
+    fontsize = 14,
     padding = 2,
     background=colors[2]
 )
@@ -327,7 +301,8 @@ def init_widgets_list():
                        background = colors[0]
                        ),
               widget.Image(
-                       filename = "~/.config/qtile/icons/python.png",
+                       #filename = "~/.config/qtile/icons/python.png",
+                       filename = "~/.config/qtile/icons/MRCO_Qtile_Logo.jpg",
                        mouse_callbacks = {'Button1': lambda: qtile.cmd_spawn('dmenu_run')}
                        ),
               widget.Sep(
@@ -380,27 +355,6 @@ def init_widgets_list():
                        background = colors[0],
                        padding = 5
                        ),
-              #widget.TextBox(
-              #         text = u'\uE0B2',
-              #         background = colors[0],
-              #         foreground = colors[4],
-              #         padding = 0,
-              #         fontsize = 37
-              #         ),
-              #widget.TextBox(
-              #         text = "  ",
-              #         padding = 0,
-              #         foreground = colors[2],
-              #         background = colors[4],
-              #         fontsize = 12
-              #         ),
-              #widget.Net(
-              #         interface = "enp5s0",
-              #         format = '{down} ↓↑ {up}',
-              #         foreground = colors[2],
-              #         background = colors[4],
-              #         padding = 5
-              #         ),
               widget.TextBox(
                        text = u'\uE0B2',
                        background = colors[0],
@@ -428,13 +382,6 @@ def init_widgets_list():
                        padding = 0,
                        fontsize = 37
                        ),
-              widget.TextBox(
-                       text = "⟳ ",
-                       padding = 2,
-                       foreground = colors[2],
-                       background = colors[4],
-                       fontsize = 14
-                       ),
               widget.CheckUpdates(
                        update_interval = 1800,
                        distro = 'Arch',
@@ -442,8 +389,8 @@ def init_widgets_list():
                        # foreground = colors[2],
                        background = colors[4],
                        no_update_string = 'No Updates',
-                       colour_have_updates = "#112730",
-                       colour_no_updates = "#112730"
+                       colour_have_updates = "#EEEEEE",
+                       colour_no_updates = "#EEEEEE"
                        ),
               widget.TextBox(
                        text = u'\uE0B2',
@@ -451,13 +398,6 @@ def init_widgets_list():
                        foreground = colors[5],
                        padding = 0,
                        fontsize = 37
-                       ),
-              widget.TextBox(
-                       text = " 🖬",
-                       foreground = colors[2],
-                       background = colors[5],
-                       padding = 0,
-                       fontsize = 14
                        ),
               widget.Memory(
                        foreground = colors[2],

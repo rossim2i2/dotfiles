@@ -33,13 +33,13 @@ font:
   bold_italic:
     family: "Ubuntu Mono Nerd Font"
 
-  size: 11 
+  size: 16
   offset:
     x: 0
-    y: 0 
+    y: 0
   glyph_offset:
-    x: 0 
-    y: 0 
+    x: 0
+    y: 0
 
 draw_bold_text_with_bright_colors: false
 
