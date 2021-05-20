@@ -7,6 +7,7 @@ ln -sf "$PWD/.dircolors" "$HOME/.dircolors"
 ln -sf "$PWD/.inputrc" "$HOME/.inputrc"
 ln -sf "$PWD/.profile" "$HOME/.profile"
 ln -sf "$PWD/.xinitrc" "$HOME/.xinitrc"
+ln -sf "$PWD/.zshrc" "$HOME/.zshrc"
 
 mkdir -p "$HOME/.local/bin" || true
 
