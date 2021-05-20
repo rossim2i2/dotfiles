@@ -33,7 +33,7 @@ font:
   bold_italic:
     family: "Ubuntu Mono Nerd Font"
 
-  size: 16
+  size: 12
   offset:
     x: 0
     y: 0
@@ -139,10 +139,10 @@ schemes:
       cyan:    '0x46d9ff'
       white:   '0xdfdfdf'
 
-#colors: *gruvbox
+colors: *gruvbox
 #colors: *xterm
 #colors: *afterglow
-colors: *dt
+#colors: *dt
 
 indexed_colors: []
 
@@ -151,7 +151,7 @@ bell:
   color: '0xffffff'
   duration: 0
 
-background_opacity: .7 
+background_opacity: 1
 
 mouse:
   double_click: { threshold: 300 }
