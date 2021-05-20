@@ -8,4 +8,4 @@ side=$(( ((HRULEWIDTH/2)-len/2)-3 ))
 left=$side
 right=$side
 [[ $[len%2] == 1 ]] && right=$[right-1]
-echo "// $(echon '-' $left) $str $(echon '-' $right)"
+echo "# $(echon '-' $left) $str $(echon '-' $right)"
