@@ -1,2 +1,2 @@
 #!/bin/sh
-vim "$(which $1)"
+exec vim "$(which $1)"
