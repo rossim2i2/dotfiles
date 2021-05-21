@@ -119,17 +119,19 @@ __ps1() {
 
   local B=$(git branch --show-current 2>/dev/null)
   test "$dir" = "$B" && B='.'
-  local countme="$USER@$(hostname):$dir($B)\$ "
+  local countme="$USER@$HOSTNAME:$dir($B)\$ "
 
   test "$B" = master -o "$B" = main && b=$r
   test -n "$B" && B="$g($b$B$g)"
 
   if test -n "${ZSH_VERSION}"; then
-    local short="$u%n$g@$h%m$g:$w$dir$B$p$P$x "
+    #local short="$u%n$g@$h%m$g:$w$dir$B$p$P$x "
+    local short="$w$dir$B$p$P$x "
     local long="$g╔ $u%n$g@%m\h$g:$w$dir$B\n$g╚ $p$P$x "
     local double="$g╔ $u%n$g@%m\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
   else
-    local short="$u\u$g@$h\h$g:$w$dir$B$p$P$x "
+    #local short="$u\u$g@$h\h$g:$w$dir$B$p$P$x "
+    local short="$w$dir$B$p$P$x "
     local long="$g╔ $u\u$g@$h\h$g:$w$dir$B\n$g╚ $p$P$x "
     local double="$g╔ $u\u$g@$h\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
   fi
@@ -143,17 +145,14 @@ __ps1() {
   fi
 }
 
-#PROMPT_COMMAND="${PROMPT_COMMAND:+"$PROMPT_COMMAND;"}__ps1;"
-source "$HOME/.shell.d/git-prompt.sh"
-source "$HOME/.shell.d/prompt.bash"
-if [ -z "$SSH_CLIENT" ] && [ -z "$SSH_TTY" ]; then ps1min; fi
+PROMPT_COMMAND="${PROMPT_COMMAND:+"$PROMPT_COMMAND;"}__ps1;"
 
 test -n "$DISPLAY" && setxkbmap -option caps:escape &>/dev/null
 
 export HRULEWIDTH=73
-export EDITOR=vi
-export VISUAL=vi
-export EDITOR_PREFIX=vi
+export EDITOR=vim
+export VISUAL=vim
+export EDITOR_PREFIX=vim
 
 test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
 
@@ -213,7 +212,7 @@ alias x="exit"
 alias sl="sl -e"
 alias mkdirisosec='d=$(isosec);mkdir $d; cd $d'
 alias main='cd $(work main)'
-alias dot='cd ~/repos/github.com/$GITUSER/dot'
+alias dot='cd ~/repos/github.com/$GITUSER/dotfiles'
 alias scripts='cd $SCRIPTS'
 alias free='free -h'
 alias df='df -h'
