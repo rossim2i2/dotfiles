@@ -84,7 +84,7 @@ __ps1() {
     local x='%f'
   else
     local r='\[\e[31m\]'
-    local g='\[\e[30m\]'
+    local g='\[\e[37m\]'
     local h='\[\e[34m\]'
     local u='\[\e[33m\]'
     local p='\[\e[33m\]'
@@ -125,13 +125,13 @@ __ps1() {
   test -n "$B" && B="$w($b$B$w)"
 
   if test -n "${ZSH_VERSION}"; then
-    #local short="$u%n$g@$h%m$g:$w$dir$B$p$P$x "
-    local short="$h$dir$B$p$P$x "
+    local short="$u%n$g@$h%m$g:$w$dir$B$p$P$x "
+    #local short="$h$dir$B$p$P$x "
     local long="$g╔ $u%n$g@%m\h$g:$w$dir$B\n$g╚ $p$P$x "
     local double="$g╔ $u%n$g@%m\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
   else
-    #local short="$u\u$g@$h\h$g:$w$dir$B$p$P$x "
-    local short="$h$dir$B$p$P$x "
+    local short="$u\u$g@$h\h$g:$w$dir$B$p$P$x "
+    #local short="$h$dir$B$p$P$x "
     local long="$g╔ $u\u$g@$h\h$g:$w$dir$B\n$g╚ $p$P$x "
     local double="$g╔ $u\u$g@$h\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
   fi
