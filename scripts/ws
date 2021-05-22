@@ -67,6 +67,7 @@ sub x_open {
     my $username = `yq -e .user.name $confpath`;
     chomp $username;
     not $username and end "No user name found.";
+    $username =~ s/"//g;
 
     my @cmd = (qw(docker run -it --rm --name), $name, '-h', $name );
 
@@ -86,7 +87,7 @@ sub x_open {
     unshift @mounts, "$dir:/home/$username";
     map { @cmd = ( @cmd, '-v', $_ ) } @mounts;
 
-    #say "Executing: " . join( " ", ( @cmd, $image ) );
+    say "Executing: " . join( " ", ( @cmd, $image ) );
     exec( @cmd, $image );
 }
 
