@@ -3,14 +3,22 @@
 
 # This is an unoptimized prototype with lots of subshells in preparation
 # for port to Go eventually. In other words, this just works for now.
+# See documentation after __END__ at the bottom. (I didn't feel like
+# writing it in Perl POD format, sorry.)
 
 use v5.14;
 use File::Path qw(make_path);
 no strict;
 
+for (qw( yq docker id )) {
+    not `which $_` and say "Missing dependency: $_" and exit 1;
+}
+
 my $image  = $ENV{'WORKSPACE_IMAGE'} || 'docker.io/rwxrob/workspace';
 my $wsdir  = $ENV{'WORKSPACES'}      || "$ENV{'HOME'}/Workspaces";
 my $editor = $ENV{'EDITOR'}          || 'vi';
+
+not -d $wsdir and mkdir($wsdir);
 
 sub end {
     say shift;
@@ -45,22 +53,39 @@ sub expand {
 sub x_open {
     my @names = get_ws_list();
     not @names and return x_create(@_);
+
     my $name = shift || x_pick();
+
     my $dir  = "$wsdir/$name";
     not -d $dir and return x_create($name);
     chdir $dir;
-    my $username = qx(yq e .user.name `ws config $name`);
+
+    my $confpath=`ws config $name`;
+    chomp $confpath;
+    not $confpath and end "No config file found.";
+
+    my $username = `yq -e .user.name $confpath`;
     chomp $username;
-    my @cmd   = (qw(docker run -it --rm --name), $name, '-h', $name );
-    my @ports = qx(yq e .ports[] `ws config $name`);
+    not $username and end "No user name found.";
+
+    my @cmd = (qw(docker run -it --rm --name), $name, '-h', $name );
+
+    my @ports = qx(yq -e .ports[] `ws config $name`);
     chomp @ports;
-    expand \@ports;
-    map { @cmd = ( @cmd, '-p', $_ ) } @ports;
-    my @mounts = qx(yq e .mounts[] `ws config $name`);
+    if ($ports[0] eq 'all') {
+        @cmd = ( @cmd, '--network', 'host' );
+    } else {
+        expand \@ports;
+        map { @cmd = ( @cmd, '-p', $_ ) } @ports;
+    }
+
+    my @mounts = qx(yq -e .mounts[] `ws config $name`);
     chomp @mounts;
+    unshift @mounts, "/var/run/docker.sock";
     expand \@mounts;
     unshift @mounts, "$dir:/home/$username";
     map { @cmd = ( @cmd, '-v', $_ ) } @mounts;
+
     #say "Executing: " . join( " ", ( @cmd, $image ) );
     exec( @cmd, $image );
 }
@@ -150,17 +175,17 @@ sub x_create {
     chomp $groupid;
     say "Group ID will be $groupid.";
 
-    $ports = "80 8080 8000 3000";
-    printf "Ports ($ports): ";
+    $ports = "";
+    printf "Ports: ";
     $resp = <STDIN>;
     chomp $resp;
-    $ports ||= $resp;
+    $ports = $resp;
 
     $mounts = '';
-    printf "Extra Mounts ($mounts): ";
+    printf "Extra Mounts: ";
     $resp = <STDIN>;
     chomp $resp;
-    $mounts ||= $resp;
+    $mounts = $resp;
 
     $confd = "$dir/.config/ws/";
     $conf  = "$confd/config.yml";
@@ -174,7 +199,7 @@ sub x_create {
 
     say $fh '# This file is used by the ws workspace container manager.';
     say $fh "# It's fine to make changes directly and is shared by host.";
-    say $fh "\nname: $name\n";
+    say $fh "\nname: $name";
 
     say $fh "\nuser:\n  name: $username\n  id: $userid\n  shell:  $shell";
     say $fh "\ngroup:\n  name: $groupname\n  id: $groupid";
@@ -198,6 +223,7 @@ sub x_dir {
     my $name = shift || x_pick();
     say "$wsdir/$name";
 }
+*x_d = *x_dir;
 
 # ------------------------ bash tab completion -----------------------
 #                  `complete -C ws ws` ->  ~/.bashrc
