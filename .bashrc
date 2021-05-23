@@ -1,6 +1,8 @@
 
 export GITUSER="rossim2i2"
 #export GITUSER="$USER"
+export DOTFILES="$HOME/repos/github.com/$GITUSER/dot"
+export TERM=xterm-256color
 
 test -e /etc/bashrc && source /etc/bashrc
 
