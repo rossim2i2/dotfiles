@@ -12,7 +12,7 @@ set autoindent
 set autowrite
 
 " activate line numbers
-set nonumber
+set number
 
 " turn col and row position on in bottom right
 set ruler
@@ -53,7 +53,7 @@ set expandtab
 set textwidth=72
 
 " disable relative line numbers, remove no to sample it
-set number relativenumber
+set relativenumber
 
 highlight NonText guifg=bg
 

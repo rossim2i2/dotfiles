@@ -1,8 +1,9 @@
+# required for lynx and tmux colors to work correctly
+export TERM=xterm-256color
 
 export GITUSER="rossim2i2"
 #export GITUSER="$USER"
 export DOTFILES="$HOME/repos/github.com/$GITUSER/dot"
-export TERM=xterm-256color
 
 test -e /etc/bashrc && source /etc/bashrc
 
@@ -31,9 +32,15 @@ pathprepend() {
   done
 }
 
+# Override as needed in .bashrc_{personal,private,work}
+# Serveral utilities depend on SCRIPTS being in a github repo
 export SCRIPTS=~/.local/bin/scripts
+test ! -d "$SCRIPTS" && mkdir -p "$SCRIPTS"
 
-pathprepend "$SCRIPTS" ~/.local/bin /usr/local/go/bin
+pathprepend \
+  "$SCRIPTS" \
+  ~/.local/bin \
+  /usr/local/go/bin
 pathappend \
   /usr/local/opt/coreutils/libexec/gnubin \
   /mingw64/bin \
