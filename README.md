@@ -1,4 +1,4 @@
-# A Collection of My Personal Dotfiles
+# A Collection of My Dotfiles
 
 ![WIP](https://img.shields.io/badge/status-wip-red.svg)
 
