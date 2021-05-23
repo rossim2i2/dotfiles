@@ -33,7 +33,7 @@ sub get_ws_list {
 
 sub image {
     not -d "$wsdir/.config.yml" and return "";
-    my $image = `yq -e '.image' "$wsdir/.config.yml"`;
+    my $image = `yq e '.image' "$wsdir/.config.yml"`;
     chomp $image;
     return $image;
 }
@@ -49,8 +49,8 @@ sub x_image {
     my $conf = "$wsdir/.config.yml";
     not $name and say "$image" and return;
     not image_exists($name) and say "Image '$name' not found. Pull." and return;
-    not -e $conf and `yq -e -n '.image="$name"' >| "$conf"` and return;
-    `yq -e -i '.image="$name"' "$conf"` and return;
+    not e $conf and `yq e -n '.image="$name"' >| "$conf"` and return;
+    `yq e -i '.image="$name"' "$conf"` and return;
 }
 
 sub x_pull {
@@ -91,15 +91,14 @@ sub x_open {
     chomp $confpath;
     not $confpath and end "No config file found.";
 
-    my $username = `yq -e .user.name $confpath`;
+    my $username = `yq e .user.name $confpath`;
     chomp $username;
     not $username and end "No user name found.";
-    $username =~ s/"//g;
+    #$username =~ s/"//g;
 
-    #my @cmd = (qw(docker run -it --rm --privileged --name), $name, '-h', $name );
-    my @cmd = (qw(docker run -it --rm --name), $name, '-h', $name );
+    my @cmd = (qw(docker run -it --rm --privileged --name), $name, '-h', $name );
 
-    my @ports = qx(yq -e '.ports[]' `ws config $name`);
+    my @ports = qx(yq e '.ports[]' `ws config $name`);
     chomp @ports;
     if ($ports[0] eq 'all') {
         @cmd = ( @cmd, '--network', 'host' );
@@ -108,7 +107,7 @@ sub x_open {
         map { @cmd = ( @cmd, '-p', $_ ) } @ports;
     }
 
-    my @mounts = qx(yq -e '.mounts[]' `ws config $name`);
+    my @mounts = qx(yq e '.mounts[]' `ws config $name`);
     chomp @mounts;
     unshift @mounts, "/var/run/docker.sock";
     expand \@mounts;
