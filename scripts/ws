@@ -93,6 +93,7 @@ sub x_open {
     my $username = `yq -e .user.name $confpath`;
     chomp $username;
     not $username and end "No user name found.";
+    $username =~ s/"//g;
 
     my @cmd = (qw(docker run -it --rm --name), $name, '-h', $name );
 
