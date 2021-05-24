@@ -182,8 +182,8 @@ keys = [
              ),
          ### My applications launched with SUPER + ALT + KEY
          Key([mod, "mod1"], "b",
-             lazy.spawn("firefox"),
-             desc='firefox browser'
+             lazy.spawn("brave"),
+             desc='brave browser'
              ),
          Key([mod, "mod1"], "l",
              lazy.spawn(myTerm+" -e lynx gopher://distro.tube"),

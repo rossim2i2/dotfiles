@@ -1,7 +1,0 @@
-#!/bin/bash
-
-sudo pacman -S alacritty exa lynx numlockx qtile tmux tree vim
-
-source "$PATH/install-gh"
-source "$PATH/install-dmenu"
-
