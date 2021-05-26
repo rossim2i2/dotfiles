@@ -218,8 +218,8 @@ alias lsa='exa -al --color=always --group-directories-first'
 alias '?'=duck
 alias '??'=google
 alias '???'=bing
-alias x="exit"
-alias sl="sl -e"
+alias x='exit'
+alias sl='sl -e'
 alias mkdirisosec='d=$(isosec);mkdir $d; cd $d'
 alias main='cd $(work main)'
 alias dot='cd ~/repos/github.com/$GITUSER/dotfiles'
@@ -227,7 +227,7 @@ alias scripts='cd $SCRIPTS'
 alias free='free -h'
 alias df='df -h'
 alias top=htop
-alias chmox="chmod +x"
+alias chmox='chmod +x'
 alias pacup='sudo pacman -Syu'                    # update standard packages
 alias parup='paru -Syu'                           # update aur pakcages
 alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
