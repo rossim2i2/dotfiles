@@ -7,7 +7,7 @@ symlink () {
     echo 'symlink <from> <to>'
     return 1
   fi
-  echo Linking $from'` -> `'$to 
+  echo Linking $from'` -> `'$to
   ln -fs $to $from
 }
 
