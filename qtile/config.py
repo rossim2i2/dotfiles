@@ -241,7 +241,7 @@ group_names = [("WWW", {'layout': 'monadtall'}),
                ("DOC", {'layout': 'monadtall'}),
                ("VBOX", {'layout': 'monadtall'}),
                ("CHAT", {'layout': 'monadtall'}),
-               ("MUS", {'layout': 'monadtall'}),
+               ("WORK", {'layout': 'monadtall'}),
                ("VID", {'layout': 'floating'}),
                ("GFX", {'layout': 'floating'})]
 
