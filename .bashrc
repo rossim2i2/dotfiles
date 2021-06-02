@@ -232,6 +232,7 @@ alias pacup='sudo pacman -Syu'                    # update standard packages
 alias parup='paru -Syu'                           # update aur pakcages
 alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
 alias ssn='sudo shutdown now'
+alias temp='cd $(mktemp -d)'
 
 which vim &>/dev/null && alias vi=vim
 
