@@ -38,13 +38,13 @@ export SCRIPTS=~/.local/bin/scripts
 test ! -d "$SCRIPTS" && mkdir -p "$SCRIPTS"
 
 pathprepend \
-  "$SCRIPTS" \
   ~/.local/bin \
   /usr/local/go/bin
+  "$SCRIPTS" \
+
 pathappend \
   /usr/local/opt/coreutils/libexec/gnubin \
   /mingw64/bin \
-  /usr/local/tinygo/bin \
   /usr/local/bin \
   /usr/local/sbin \
   /usr/games \
