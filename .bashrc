@@ -15,9 +15,9 @@ esac
 pathappend() {
   for ARG in "$@"; do
     test -d "${ARG}" || continue
-    case ":${PATH}:" in
-    *:${ARG}:*) continue ;;
-    esac
+    PATH=${PATH//:${ARG}:/:}
+    PATH=${PATH/#${ARG}:/}
+    PATH=${PATH/%:${ARG}/}
     export PATH="${PATH:+"${PATH}:"}${ARG}"
   done
 }
@@ -25,9 +25,9 @@ pathappend() {
 pathprepend() {
   for ARG in "$@"; do
     test -d "${ARG}" || continue
-    case ":${PATH}:" in
-    *:${ARG}:*) continue ;;
-    esac
+    PATH=${PATH//:${ARG}:/:}
+    PATH=${PATH/#${ARG}:/}
+    PATH=${PATH/%:${ARG}/}
     export PATH="${ARG}${PATH:+":${PATH}"}"
   done
 }
@@ -39,8 +39,8 @@ test ! -d "$SCRIPTS" && mkdir -p "$SCRIPTS"
 
 pathprepend \
   ~/.local/bin \
-  /usr/local/go/bin
-  "$SCRIPTS" \
+  /usr/local/go/bin \
+  "$SCRIPTS"
 
 pathappend \
   /usr/local/opt/coreutils/libexec/gnubin \
