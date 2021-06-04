@@ -1,2 +1,3 @@
 #!/bin/sh
-exec vim "$(which $1)"
+cmd=$(command -v $1)
+test -n "$cmd" && exec vim "$cmd"
