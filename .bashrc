@@ -233,6 +233,7 @@ alias parup='paru -Syu'                           # update aur pakcages
 alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
 alias ssn='sudo shutdown now'
 alias temp='cd $(mktemp -d)'
+alias view='vi -R'
 
 which vim &>/dev/null && alias vi=vim
 
