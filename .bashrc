@@ -1,16 +1,55 @@
-# required for lynx and tmux colors to work correctly
-export TERM=xterm-256color
-
-export GITUSER="rossim2i2"
-#export GITUSER="$USER"
-export DOTFILES="$HOME/repos/github.com/$GITUSER/dot"
+#   __  __ _      _                _   _____               _
+#  |  \/  (_)    | |              | | |  __ \             (_)
+#  | \  / |_  ___| |__   __ _  ___| | | |__) |___  ___ ___ _
+#  | |\/| | |/ __| '_ \ / _` |/ _ \ | |  _  // _ \/ __/ __| |
+#  | |  | | | (__| | | | (_| |  __/ | | | \ \ (_) \__ \__ \ |
+#  |_|  |_|_|\___|_| |_|\__,_|\___|_| |_|  \_\___/|___/___/_|
 
 test -e /etc/bashrc && source /etc/bashrc
 
 case $- in
-*i*) ;;
+*i*) ;; # interactive
 *) return ;;
 esac
+
+# ----------------------- environment variables ----------------------
+
+#export GITUSER="$USER"
+export GITUSER="rossim2i2"
+export DOTFILES="$HOME/repos/github.com/$GITUSER/dot"
+
+export TERM=xterm-256color
+export HRULEWIDTH=73
+export EDITOR=vim
+export VISUAL=vim
+export EDITOR_PREFIX=vim
+
+export PYTHONDONTWRITEBYTECODE=1
+
+test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
+
+export GOPRIVATE="github.com/$GITUSER/*,gitlab.com/$GITUSER/*"
+export GOPATH=~/.local/share/go
+export GOBIN=~/.local/bin
+export GOPROXY=direct
+export CGO_ENABLED=0
+
+# ------------------------------- pager ------------------------------
+
+if test -x /usr/bin/lesspipe; then
+  export LESSOPEN="| /usr/bin/lesspipe %s";
+  export LESSCLOSE="/usr/bin/lesspipe %s %s";
+fi
+
+export LESS_TERMCAP_mb="[35m" # magenta
+export LESS_TERMCAP_md="[33m" # yellow
+export LESS_TERMCAP_me="" # "0m"
+export LESS_TERMCAP_se="" # "0m"
+export LESS_TERMCAP_so="[34m" # blue
+export LESS_TERMCAP_ue="" # "0m"
+export LESS_TERMCAP_us="[4m"  # underline
+
+# ------------------------------- path -------------------------------
 
 pathappend() {
   for ARG in "$@"; do
@@ -54,6 +93,8 @@ pathappend \
   /sbin \
   /bin
 
+# ------------------------------ cdpath ------------------------------
+
 export CDPATH=.:\
 ~/repos/github.com:\
 ~/repos/github.com/$GITUSER:\
@@ -61,20 +102,26 @@ export CDPATH=.:\
 /media/$USER:\
 ~
 
-export HISTCONTROL=ignoreboth
-export HISTSIZE=5000
-export HISTFILESIZE=10000
+# ------------------------ bash shell options ------------------------
 
 shopt -s checkwinsize
 shopt -s expand_aliases
 shopt -s globstar
 shopt -s dotglob
 shopt -s extglob
-shopt -s histappend
 #shopt -s nullglob # bug kills completion for some
+#set -o noclobber
+
+# ------------------------------ history -----------------------------
+
+export HISTCONTROL=ignoreboth
+export HISTSIZE=5000
+export HISTFILESIZE=10000
 
 set -o vi
-set -o noclobber
+shopt -s histappend
+
+# --------------------------- smart prompt ---------------------------
 
 PROMPT_LONG=50
 PROMPT_MAX=95
@@ -154,21 +201,14 @@ __ps1() {
   fi
 }
 
-PROMPT_COMMAND="${PROMPT_COMMAND:+"$PROMPT_COMMAND;"}__ps1;"
+#PROMPT_COMMAND="${PROMPT_COMMAND:+"$PROMPT_COMMAND;"}__ps1;"
+PROMPT_COMMAND="__ps1"
+
+# ----------------------------- keyboard -----------------------------
 
 test -n "$DISPLAY" && setxkbmap -option caps:escape &>/dev/null
 
-export HRULEWIDTH=73
-export EDITOR=vim
-export VISUAL=vim
-export EDITOR_PREFIX=vim
-
-test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
-
-export PYTHONDONTWRITEBYTECODE=1
-
-clear() { printf "\e[H\e[2J"; } && export -f clear
-c() { printf "\e[H\e[2J"; } && export -f c
+# ----------------------------- dircolors ----------------------------
 
 if which dircolors &>/dev/null; then
   if test -r ~/.dircolors; then
@@ -177,6 +217,8 @@ if which dircolors &>/dev/null; then
     eval "$(dircolors -b)"
   fi
 fi
+
+# ------------- source external dependencies / completion ------------
 
 owncomp=(pdf md yt gl kn auth pomo config sshkey ws ./setup)
 for i in ${owncomp[@]}; do complete -C $i $i; done
@@ -187,24 +229,7 @@ type kubectl &>/dev/null && . <(kubectl completion bash)
 type kind &>/dev/null && . <(kind completion bash)
 #type yq &>/dev/null && . <(yq completion bash)
 
-if test -x /usr/bin/lesspipe; then
-  export LESSOPEN="| /usr/bin/lesspipe %s";
-  export LESSCLOSE="/usr/bin/lesspipe %s %s";
-fi
-
-export LESS_TERMCAP_mb="[35m" # magenta
-export LESS_TERMCAP_md="[33m" # yellow
-export LESS_TERMCAP_me="0m"
-export LESS_TERMCAP_se="0m"
-export LESS_TERMCAP_so="[34m" # blue
-export LESS_TERMCAP_ue="0m"
-export LESS_TERMCAP_us="[4m"  # underline
-
-export GOPRIVATE="github.com/$GITUSER/*,gitlab.com/$GITUSER/*"
-export GOPATH=~/.local/share/go
-export GOBIN=~/.local/bin
-export GOPROXY=direct
-export CGO_ENABLED=0
+# ------------------------------ aliases -----------------------------
 
 unalias -a
 alias d=docker
@@ -237,6 +262,11 @@ alias view='vi -R'
 
 which vim &>/dev/null && alias vi=vim
 
+# ----------------------------- functions ----------------------------
+
+clear() { printf "\e[H\e[2J"; } && export -f clear
+c() { printf "\e[H\e[2J"; } && export -f c
+
 envx() {
   local envfile="$1"
   if test ! -e "$envfile" ; then
@@ -257,6 +287,8 @@ envx() {
 } && export -f envx
 
 test -e ~/.env && envx ~/.env
+
+# -------------------- personalized configuration --------------------
 
 test -r ~/.bash_personal && source ~/.bash_personal
 test -r ~/.bash_private && source ~/.bash_private
