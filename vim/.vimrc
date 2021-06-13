@@ -15,7 +15,7 @@ set autowrite
 set number
 
 " turn col and row position on in bottom right
-set ruler
+set ruler " see ruf for formatting
 
 " show command and insert mode
 set showmode
@@ -33,14 +33,12 @@ if v:version >= 800
   " stop vim from silently fucking with files that it shouldn't
   set nofixendofline
 
-  " better list chars
-  " set listchars=tab:→\ ,eol:↲,nbsp:␣,space:·,trail:·,extends:⟩,precedes:⟨
-
   " better ascii friendly listchars
   set listchars=space:*,trail:*,nbsp:*,extends:>,precedes:<,tab:\|>
 
   " i fucking hate automatic folding
   set foldmethod=manual
+  set nofoldenable
 endif
 
 " mark trailing spaces as errors
@@ -53,9 +51,10 @@ set expandtab
 set textwidth=72
 
 " disable relative line numbers, remove no to sample it
-set relativenumber
+set norelativenumber
 
-highlight NonText guifg=bg
+" makes ~ effectively invisible
+"highlight NonText guifg=bg
 
 " turn on default spell checking
 "set spell
@@ -70,15 +69,13 @@ set icon
 " center the cursor always on the screen
 "set scrolloff=999
 
-" highlight search hits,  \+<cr> to clear
+" highlight search hits
 set hlsearch
 set incsearch
 set linebreak
-map <silent> <leader><cr> :noh<cr>:redraw!<cr>
 
 " avoid most of the 'Hit Enter ...' messages
-"set shortmess=aoOtIF
-set shortmess=aoOtI
+set shortmess=aoOtTI
 
 " prevents truncated yanks, deletes, etc.
 set viminfo='20,<1000,s1000
@@ -87,28 +84,32 @@ set viminfo='20,<1000,s1000
 let g:loaded_matchparen=1
 set noshowmatch
 
+" wrap around when searching
+set wrapscan
+
 " Just the defaults, these are changed per filetype by plugins.
 " Most of the utility of all of this has been superceded by the use of
 " modern simplified pandoc for capturing knowledge source instead of
 " arbitrary raw text files.
 
-set formatoptions-=t   " don't auto-wrap text using text width
-set formatoptions+=c   " autowrap comments using textwidth with leader
-set formatoptions-=r   " don't auto-insert comment leader on enter in insert
-set formatoptions-=o   " don't auto-insert comment leader on o/O in normal
-set formatoptions+=q   " allow formatting of comments with gq
-set formatoptions-=w   " don't use trailing whitespace for paragraphs
-set formatoptions-=a   " disable auto-formatting of paragraph changes
-set formatoptions-=n   " don't recognized numbered lists
-set formatoptions+=j   " delete comment prefix when joining
-set formatoptions-=2   " don't use the indent of second paragraph line
-set formatoptions-=v   " don't use broken 'vi-compatible auto-wrapping'
-set formatoptions-=b   " don't use broken 'vi-compatible auto-wrapping'
-set formatoptions+=l   " long lines not broken in insert mode
-set formatoptions+=m   " multi-byte character line break support
-set formatoptions+=M   " don't add space before or after multi-byte char
-set formatoptions-=B   " don't add space between two multi-byte chars in join 
-set formatoptions+=1   " don't break a line after a one-letter word
+set fo-=t   " don't auto-wrap text using text width
+set fo+=c   " autowrap comments using textwidth with leader
+set fo-=r   " don't auto-insert comment leader on enter in insert
+set fo-=o   " don't auto-insert comment leader on o/O in normal
+set fo+=q   " allow formatting of comments with gq
+set fo-=w   " don't use trailing whitespace for paragraphs
+set fo-=a   " disable auto-formatting of paragraph changes
+set fo-=n   " don't recognized numbered lists
+set fo+=j   " delete comment prefix when joining
+set fo-=2   " don't use the indent of second paragraph line
+set fo-=v   " don't use broken 'vi-compatible auto-wrapping'
+set fo-=b   " don't use broken 'vi-compatible auto-wrapping'
+set fo+=l   " long lines not broken in insert mode
+set fo+=m   " multi-byte character line break support
+set fo+=M   " don't add space before or after multi-byte char
+set fo-=B   " don't add space between two multi-byte chars
+set fo+=1   " don't break a line after a one-letter word
+set shm+=T   " truncate all messages instead of 'Press Enter'
 
 " requires PLATFORM env variable set (in ~/.bashrc)
 if $PLATFORM == 'mac'
@@ -131,81 +132,85 @@ set ttyfast
 " allow sensing the filetype
 filetype plugin on
 
-" Install vim-plug if not already installed
-" (Yes I know about Vim 8 Plugins. They suck.)
-if v:version >= 800 && executable('curl') && empty(glob('~/.vim/autoload/plug.vim'))
-  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
-      \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-  autocmd VimEnter * PlugInstall
-  echo "Don't forget to GoInstallBinaries if you're doing Go dev."
-endif
-
 " high contrast for streaming, etc.
 set background=dark
+
+" base default color changes (gruvbox dark friendly)
+hi StatusLine ctermfg=black ctermbg=NONE
+hi StatusLineNC ctermfg=black ctermbg=NONE
+hi Normal ctermbg=NONE
+hi Special ctermfg=cyan
+hi LineNr ctermfg=black ctermbg=NONE
+hi SpecialKey ctermfg=black ctermbg=NONE
+hi ModeMsg ctermfg=black cterm=NONE ctermbg=NONE
+hi MoreMsg ctermfg=black ctermbg=NONE
+hi NonText ctermfg=black ctermbg=NONE
+hi vimGlobal ctermfg=black ctermbg=NONE
+hi ErrorMsg ctermbg=234 ctermfg=darkred cterm=NONE
+hi Error ctermbg=234 ctermfg=darkred cterm=NONE
+hi SpellBad ctermbg=234 ctermfg=darkred cterm=NONE
+hi SpellRare ctermbg=234 ctermfg=darkred cterm=NONE
+hi Search ctermbg=236 ctermfg=darkred
+hi vimTodo ctermbg=236 ctermfg=darkred
+hi Todo ctermbg=236 ctermfg=darkred
+hi IncSearch ctermbg=236 cterm=NONE ctermfg=darkred
+hi MatchParen ctermbg=236 ctermfg=darkred
+
+" color overrides
+au FileType * hi StatusLine ctermfg=black ctermbg=NONE
+au FileType * hi StatusLineNC ctermfg=black ctermbg=NONE
+au FileType * hi Normal ctermbg=NONE
+au FileType * hi Special ctermfg=cyan
+au FileType * hi LineNr ctermfg=black ctermbg=NONE
+au FileType * hi SpecialKey ctermfg=black ctermbg=NONE
+au FileType * hi ModeMsg ctermfg=black cterm=NONE ctermbg=NONE
+au FileType * hi MoreMsg ctermfg=black ctermbg=NONE
+au FileType * hi NonText ctermfg=black ctermbg=NONE
+au FileType * hi vimGlobal ctermfg=black ctermbg=NONE
+au FileType * hi ErrorMsg ctermbg=234 ctermfg=darkred cterm=NONE
+au FileType * hi Error ctermbg=234 ctermfg=darkred cterm=NONE
+au FileType * hi SpellBad ctermbg=234 ctermfg=darkred cterm=NONE
+au FileType * hi SpellRare ctermbg=234 ctermfg=darkred cterm=NONE
+au FileType * hi Search ctermbg=236 ctermfg=darkred
+au FileType * hi vimTodo ctermbg=236 ctermfg=darkred
+au FileType * hi Todo ctermbg=236 ctermfg=darkred
+au FileType * hi IncSearch ctermbg=236 cterm=NONE ctermfg=darkred
+au FileType * hi MatchParen ctermbg=236 ctermfg=darkred
+au FileType markdown,pandoc hi Title ctermfg=yellow ctermbg=NONE
+au FileType markdown,pandoc hi Operator ctermfg=yellow ctermbg=NONE
+
+" Edit/Reload vimr configuration file
+nnoremap confe :e $HOME/.vimrc<CR>
+nnoremap confr :source $HOME/.vimrc<CR>
+
+set ruf=%50(%=%#LineNr#%.50F\ [%{strlen(&ft)?&ft:'none'}]\ %l:%c\ %p%%%)
 
 " only load plugins if Plug detected
 if filereadable(expand("~/.vim/autoload/plug.vim"))
 
-  " load all the plugins
   call plug#begin('~/.vimplugins')
-  Plug 'z0mbix/vim-shfmt'
+  "Plug 'z0mbix/vim-shfmt' " fucking hate joining \ lines
   Plug 'sheerun/vim-polyglot'
   Plug 'vim-pandoc/vim-pandoc'
   Plug 'rwxrob/vim-pandoc-syntax-simple'
   Plug 'cespare/vim-toml'
   Plug 'pangloss/vim-javascript'
   Plug 'fatih/vim-go', { 'do': ':GoInstallBinaries' }
+  Plug 'vim-go/vim-go'
   Plug 'PProvost/vim-ps1'
   Plug 'tpope/vim-fugitive'
   Plug 'morhetz/gruvbox'
   Plug 'roxma/vim-tmux-clipboard'
   call plug#end()
 
-
-  "let g:airline_powerline_fonts = 1
-  "if !exists('g:airline_symbols')
-    "let g:airline_symbols = {}
-  "endif
-
-	"let g:airline_left_sep = "\uE0C4"
-	"let g:airline_right_sep = "\uE0C5"
-	"let g:airline_left_sep = "\uE0C6"
-	"let g:airline_right_sep = "\uE0C7"
-	"let g:airline_left_sep = "\uE0C4"
-	"let g:airline_right_sep = "\uE0C5"
-
-  "autocmd!
-
-  "colorscheme gruvbox
-  "let g:gruvbox_transparent_bg=1
-  hi Normal ctermbg=NONE " for transparent background
-  hi SpellBad ctermbg=red " for transparent background
-  hi SpellRare ctermbg=red
-  hi Special ctermfg=cyan
-  au FileType pandoc hi pandocAtxHeader ctermfg=yellow cterm=bold
-  au FileType pandoc hi pandocAtxHeaderMark ctermfg=yellow cterm=bold
-  au FileType pandoc hi pandocAtxStart ctermfg=yellow cterm=bold
-  "hi goDeclsFzfFunction ctermfg=cyan
-  "colorscheme elflord
-  "set cursorline
-  "set noshowmode
-  "set rulerformat=%55(%f\ %y%r\ %l:%c\ %p%%%) "55 effective max
-
-  set noruler
-  "set rulerformat=%55(%f\ %y%r\ %l:%c\ %p%%%) "55 effective max
-
-  set laststatus=2
-  set statusline=
-  set statusline+=%*\ %<%.60F%*                      " path, trunc to 80 length
-  set statusline+=\ [%{strlen(&ft)?&ft:'none'}]     " filetype
-  set statusline+=%*\ %l:%c%*                        " current line and column
-  set statusline+=%*\ %p%%%*                         " percentage
-
-  "set statusline+=%m\ %F\ %y\ %{&fileencoding?&fileencoding:&encoding}\ %=%(C:%c\ L:%l\ %P%) 
-  set cmdheight=1
-
-  " shell
   let g:shfmt_fmt_on_save = 1
+
+  " Even though the POSIX shell standard and clean here-documents
+  " require use of tabs, the amount of YAML (which forbids tabs) and
+  " shell these days really mandates this. Otherwise, people will be
+  " cutting and pasting in their shitty graphic editors and whine about
+  " why they have tabs with their spaces in their YAML files. And most
+  " Vim users don't even know what the fuck `set list` even does.
   let g:shfmt_extra_args = '-i 2'
 
   " pandoc
@@ -272,12 +277,21 @@ nnoremap <C-L> :nohl<CR><C-L>
 " enable omni-completion
 set omnifunc=syntaxcomplete#Complete
 
+" format perl on save
+fun! s:Perltidy()
+  let l:pos = getcurpos()
+  silent execute '%!perltidy -i=2'
+  call setpos('.', l:pos)
+endfun
+"autocmd FileType perl autocmd BufWritePre <buffer> call s:Perltidy()
+
 " force some file names to be specific file type
 au bufnewfile,bufRead *.bash* set ft=sh
 au bufnewfile,bufRead *.pegn set ft=config
 au bufnewfile,bufRead *.profile set filetype=sh
 au bufnewfile,bufRead *.crontab set filetype=crontab
 au bufnewfile,bufRead *ssh/config set filetype=sshconfig
+au bufnewfile,bufRead .dockerignore set filetype=gitignore
 au bufnewfile,bufRead *gitconfig set filetype=gitconfig
 au bufnewfile,bufRead /tmp/psql.edit.* set syntax=sql
 au bufnewfile,bufRead doc.go set spell
@@ -323,13 +337,13 @@ inoremap <down> <NOP>
 inoremap <left> <NOP>
 inoremap <right> <NOP>
 
-" Map alternatives the <ESC> key (<C-[> already is) 
+" Map alternatives the <ESC> key (<C-[> already is)
 inoremap jj <Esc>
 cnoremap jj <Esc>
-inoremap kk <Esc> 
+inoremap kk <Esc>
 cnoremap kk <Esc>
 inoremap kj <Esc>
-cnoremap kj <Esc> 
+cnoremap kj <Esc>
 
 " Better page down and page up
 noremap <C-n> <C-d>
@@ -339,6 +353,3 @@ noremap <C-p> <C-b>
 set rtp^=~/.vimpersonal
 set rtp^=~/.vimprivate
 set rtp^=~/.vimwork
-
-hi StatusLineNC term=bold cterm=bold gui=bold
-hi StatusLine term=bold cterm=bold gui=bold
