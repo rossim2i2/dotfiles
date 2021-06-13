@@ -140,7 +140,7 @@ __ps1() {
     local x='%f'
   else
     local r='\[\e[31m\]'
-    local g='\[\e[37m\]'
+    local g='\[\e[30m\]'
     local h='\[\e[34m\]'
     local u='\[\e[33m\]'
     local p='\[\e[33m\]'
