@@ -195,8 +195,8 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   Plug 'rwxrob/vim-pandoc-syntax-simple'
   Plug 'cespare/vim-toml'
   Plug 'pangloss/vim-javascript'
-  Plug 'fatih/vim-go', { 'do': ':GoInstallBinaries' }
-  Plug 'vim-go/vim-go'
+  Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
+  "Plug 'vim-go/vim-go'
   Plug 'PProvost/vim-ps1'
   Plug 'tpope/vim-fugitive'
   Plug 'morhetz/gruvbox'
