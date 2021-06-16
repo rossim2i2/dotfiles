@@ -211,7 +211,7 @@ test -n "$DISPLAY" && setxkbmap -option caps:escape &>/dev/null
 
 # ----------------------------- dircolors ----------------------------
 
-if which dircolors &>/dev/null; then
+if command -v dircolors &>/dev/null; then
   if test -r ~/.dircolors; then
     eval "$(dircolors -b ~/.dircolors)"
   else
