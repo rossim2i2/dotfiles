@@ -1,7 +1,6 @@
 #!/bin/bash
 
-sudo pacman -S alacritty exa numlockx qtile tree
+sudo pacman -S alacritty exa numlockx qtile tree github-cli
 
-source "$PATH/install-gh"
 source "$PATH/install-dmenu"
 
