@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+
+addTodo() {
+
+  exe="todo"
+  test ! -d "$KN/$exe" && echo "Directory not found: $KN/$exe" && exit 1
+  dir="$KN/$exe/$(isosec)"
+  mkdir -p "$dir"
+   
+  buf=$(argsorin "$*")
+  printf "$buf" | sed 's/#\+ *//' | sed 's/\s*\*\+ *//' >> "$dir/README.md"
+
+  cd "$dir"
+  test -r "$dir/README.md" || rmdir "$dir"
+  line=$(head -1 "$dir/README.md")
+  test -n "$line"
+  git add -A "$dir"
+  git commit --quiet -m "$line"
+  git push --quiet
+  echo "Added new Todo. Undo to get text back."
+
+}
+
+addTodo "$@"
