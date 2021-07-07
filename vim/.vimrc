@@ -273,7 +273,7 @@ endfun
 
 " force some file names to be specific file type
 au bufnewfile,bufRead *.bash* set ft=sh
-au bufnewfile,bufRead *.pegn set ft=config
+au bufnewfile,bufRead *.{peg,pegn} set ft=config
 au bufnewfile,bufRead *.profile set filetype=sh
 au bufnewfile,bufRead *.crontab set filetype=crontab
 au bufnewfile,bufRead *ssh/config set filetype=sshconfig
