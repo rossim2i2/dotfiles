@@ -1,11 +1,11 @@
 #!/usr/bin/bash
 
 declare -A emoji
-emoji[smile]=😃
+emoji[smile]=🙂
 emoji[bear]=🐻
 emoji[hamburger]=🍔
 emoji[lightbulb]=💡
-emoji[pomo]=🍅
+emoji[pomo]=🍅 U+1F345
 
 toemoji() {
   local in=/dev/stdin
