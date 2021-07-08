@@ -6,10 +6,15 @@ snip() {
   local name="$1"
   shift
   local path="$SNIPPETS/$name"
+  
   if [[ -r $path ]]; then
 
     local buf="$(<$path)"
-    local in="$(</dev/stdin)"
+    if [[ -s /dev/stdin ]]; then
+      local in="$(</dev/stdin)"
+    else
+      local in=""
+    fi
 
     if [[ $# = 0 && -z $in ]]; then
       echo "$buf"
