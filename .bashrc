@@ -16,8 +16,8 @@ esac
 
 #export GITUSER="$USER"
 export GITUSER="rossim2i2"
-export DOTFILES="$HOME/repos/github.com/$GITUSER/dot"
-export SNIPPETS="$HOME/repos/github.com/$GITUSER/dot/snippets"
+export DOTFILES="$HOME/repos/github.com/$GITUSER/dotfiles"
+export SNIPPETS="$HOME/repos/github.com/$GITUSER/dotfiles/snippets"
 export GHREPOS="$HOME/repos/github.com/$GITUSER/"
 
 export TERM=xterm-256color
