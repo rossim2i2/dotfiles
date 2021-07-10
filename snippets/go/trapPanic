@@ -1,0 +1,10 @@
+import "log"
+
+func trapPanic() {
+	p := recover()
+	if p != nil {
+		log.Println(p)
+	}
+}
+
+// add "defer trapPanic()" to main()
