@@ -54,4 +54,4 @@ xrandr --output DisplayPort-0 --auto --output DisplayPort-1 --mode 2560x1440 --r
 
 # exec bspwm
 # exec xmonad
-exec qtile
+exec qtile start
