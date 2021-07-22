@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Add the following to bashrc to enable completion:
@@ -51,9 +51,26 @@ query() {
 list() {
   test ! -d "$KN/$EXE" && echo "Directory not found: $KN/$EXE" && exit 1
   dir="$KN/$EXE"
-  cd "$dir"
-  git ls-files --full-name | grep "^2" | xargs git log --diff-filter=A --pretty=format:"%Cgreen%s" --name-only --
-  #git ls-files --full-name | grep "^2" | xargs git log --diff-filter=A --pretty=format:"%Cgreen%s" --name-only -- | sed -z 's/\n\n//g;s/\n/ - /g;s/.md/.md\n/g'
+
+  local -a zets=($(find "$dir" -maxdepth 2 -type d -path '*/20*' ))
+
+  local IFS=$'\n'
+  for i in ${zets[@]}; do
+    [[ -r "$i/README.md" ]] || continue
+    echo "${i##*/}" $(head -1 "$i/README.md")
+  done
+}
+
+remove() {
+  local IFS=$'\n'
+  cd "$KN$EXE"
+  select title in `$EXE list`; do
+    rm -rf "$KN$EXE/${title%% *}"
+    git add "$KN$EXE"
+    git commit -m "done"
+    git push
+    exit
+  done
 }
 
 case "$1" in
@@ -63,5 +80,6 @@ q | query)
   query "$@"
   ;;
 l | ls | list) list ;;
+rm | remove) remove ;;
 *) echo Unsupported. ;;
 esac
