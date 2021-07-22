@@ -73,6 +73,15 @@ remove() {
   done
 }
 
+view() {
+  local IFS=$'\n'
+  cd "$KN$EXE"
+  select title in `$EXE list`; do
+    vim "$KN$EXE/${title%% *}/README.md"
+    exit
+  done
+}
+
 case "$1" in
 add | "") add ;;
 q | query)
@@ -81,5 +90,6 @@ q | query)
   ;;
 l | ls | list) list ;;
 rm | remove) remove ;;
+v | view) view ;;
 *) echo Unsupported. ;;
 esac
