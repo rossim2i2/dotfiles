@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 for code in {30..37}; do
   echo -en "\e[${code}m"'\\e['"$code"'m'"\e[0m";
   echo -en "  \e[$code;1m"'\\e['"$code"';1m'"\e[0m";
