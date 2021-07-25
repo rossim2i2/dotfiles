@@ -1,15 +1,29 @@
 #!/bin/bash
 set -e
 
-# Add the following to bashrc to enable completion:
+# This zet script is a multicall executable, which means you may have
+# opened another file or link which opened this.
+#
+# Add the following to bashrc to enable completion (replace zet with
+# your multicall executable name):
 #
 #   complete -C zet zet
 #
 # Note that you will need one such complete line for every multicall
 # variation of this script (ex: ln -s zet log; complete -C log log)
 
-test -z "$KN" && echo "KN (knowledge directory) not set." && exit 1
 test -z "$GITUSER" && echo "GITUSER not set." && exit 1
+
+# Check for $ZETDIR or $KN variables (in that order). If found, use
+# those variables for the parent directory. If they do not exist, check
+# for the existance of the default directory and create the folder if
+# necessary. This not only allows for customization of the parent
+# directory via $ZETDIR, but also allows for compatibility with the
+# KEG/KN toolset.
+
+test -d "$HOME/.local/share/zet" && pdir="$HOME/.local/share/zet"
+test -d "$KN" && pdir="$KN"
+test -d "$ZETDIR" && pdir="$ZETDIR"
 
 EXE=${0##*/}
 test -z "$EXE" && echo "Could not determine name of executable." && exit 1
@@ -48,11 +62,11 @@ query() {
   open "$it"
 }
 
-list() {
+titles() {
   test ! -d "$KN/$EXE" && echo "Directory not found: $KN/$EXE" && exit 1
   dir="$KN/$EXE"
 
-  local -a zets=($(find "$dir" -maxdepth 2 -type d -path '*/20*' ))
+  local -a zets=($(find "$dir" -maxdepth 2 -type d -path '*/20*' | sort ))
 
   local IFS=$'\n'
   for i in ${zets[@]}; do
@@ -61,12 +75,24 @@ list() {
   done
 }
 
+_last() {
+  local line=$(titles | tail -1)
+  echo "* [${line##*\# }](https://github.com/$GITUSER/$EXE/tree/main/${line%% *})"
+}
+
+totxt() {
+  local zet="$1"
+  dir="$pdir/$EXE/$zet"
+  [[ -r $dir/README.md ]] || return
+  txt < $dir/README.md
+}
+
 remove() {
   local IFS=$'\n'
-  cd "$KN$EXE"
+  cd "$pdir/$EXE"
   select title in `$EXE list`; do
-    rm -rf "$KN$EXE/${title%% *}"
-    git add "$KN$EXE"
+    rm -rf "$pdir/$EXE/${title%% *}"
+    git add "$pdir/$EXE"
     git commit -m "done"
     git push
     exit
@@ -75,9 +101,9 @@ remove() {
 
 view() {
   local IFS=$'\n'
-  cd "$KN$EXE"
+  cd "$pdir/$EXE"
   select title in `$EXE list`; do
-    vim "$KN$EXE/${title%% *}/README.md"
+    vim "$pdir/$EXE/${title%% *}/README.md"
     exit
   done
 }
@@ -88,8 +114,10 @@ q | query)
   shift
   query "$@"
   ;;
-l | ls | list) list ;;
+l | ls | list | titles) titles ;;
 rm | remove) remove ;;
 v | view) view ;;
+totxt) shift; totxt "$@";;
+last) shift; _last "$@";;
 *) echo Unsupported. ;;
 esac
