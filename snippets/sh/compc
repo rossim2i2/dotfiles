@@ -6,34 +6,50 @@
 # use it simply add a function with the additional command and add the
 # name of it to the commands array declaration at the top of the script.
 # Then add complete -C foo foo (or something like it) to your bashrc.
+# Begin functions with underscore to allow useful command names to be
+# used that would otherwise conflict with existing systam and bash
+# keywords.
 
-declare -a COMMANDS=(foo usage)
-CMD="${1:-usage}"; shift 2>/dev/null
+# ------------------------- complete context -------------------------
 
-# ----------------------------- COMMANDS -----------------------------
+declare -a COMMANDS=(hello hi privyet)
 
-foo() {
-    echo "would foo"
-}
+if [[ -n $COMP_LINE ]]; then
+    for c in "${COMMANDS[@]}"; do
+        [[ ${c:0:${#2}} == "${2,,}" ]] && echo "$c"
+    done
+    exit
+fi
 
-usage() {
+# ----------------------------- commands -----------------------------
+
+_usage() {
     local cmds="${COMMANDS[@]}"
     printf "usage: ${0##*/} (${cmds// /|})\n"
 }
 
-# ------------------------ complete -C foo foo -----------------------
+_hello() {
+    echo hello
+}
 
 
-if [[ -n $COMP_LINE ]]; then
-    for c in ${COMMANDS[@]}; do 
-        [[ ${c:0:${#1}} == $1 ]] && echo "$c"
-    done
-    exit 0
-fi
+_hi() {
+    echo hi there
+}
 
-for c in ${COMMANDS[@]}; do
-    if [[ $c == $CMD ]]; then
-        "$CMD" "$@"
+_privyet() {
+    echo privyet
+    return 1
+}
+
+# ---------------------------- delegation ----------------------------
+
+declare cmd="$1"; shift
+for c in "${COMMANDS[@]}"; do
+    if [[ $c == "$cmd" ]]; then
+        "_$cmd" "$@"
         exit $?
     fi
 done
+
+_usage "$@"
