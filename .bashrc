@@ -223,7 +223,7 @@ fi
 
 # ------------- source external dependencies / completion ------------
 
-owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log ./setup)
+owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log todo ./setup)
 for i in ${owncomp[@]}; do complete -C $i $i; done
 
 type gh &>/dev/null && . <(gh completion -s bash)
