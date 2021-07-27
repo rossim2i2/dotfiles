@@ -289,6 +289,7 @@ _sync() {
   local desc=$(zet body "$zetid")$'\n'$(snip text/ytfoot)$'\n\n'"[ZETID:$zetid]"$'\n'"https://github.com/rwxrob/zet/tree/main/$zetid"
   local eol=$'\n'
   desc=$(jq -R -s -c <<< "$desc")
+  zet video "$zetid" "https://youtu.be/$ytid"
   # TODO add the video link to the zet description
   local resp=$(curl -s --compressed -X PUT \
    "https://www.googleapis.com/youtube/v3/videos?part=snippet,status&key=${YOUTUBE_APIKEY}" \
