@@ -21,69 +21,24 @@ _newest() {
   [[ ${#f} > 0 ]] && echo "${f[-1]}"
 }
 
-_list_assets() {
-  curl -s --compressed -X GET \
-   "https://www.googleapis.com/youtube/partner/v1/assets?key=${YOUTUBE_APIKEY}" \
-  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
-  -H "Accept: application/json" 
-}
-
-_create_asset() {
-  _list_assets
-}
-
-# _create_asset() {
-#   curl -s --compressed -X POST \
-#    "https://www.googleapis.com/youtube/v3/videos?part=snippet&key=${YOUTUBE_APIKEY}" \
-#   -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
-#   -H "Accept: application/json" \
-#   -H "Content-Type: application/json" \
-#   --data-raw '{"id": "'"$id"'", "snippet": {"title": "'"$*"'", "categoryId":"28"} }' | jq -r '.snippet.title'
-# }
-
-_set_asset_ownership() {
-  echo would set asset ownwership
-}
-
-_claim_video() {
-  echo would claim video
-}
-
-_set_advertising() {
-  echo would set advertising
-}
-
-
-# ------------------------- complete context -------------------------
-
-declare -a COMMANDS=(
-  usage o open last live u uploads v video t title n name
-  f file d description zet sync m monetize 
-)
-
-if [[ -n $COMP_LINE ]]; then
-    for c in "${COMMANDS[@]}"; do
-        [[ ${c:0:${#2}} == "${2,,}" ]] && echo "$c"
-    done
-    exit
-fi
-
 # ----------------------------- commands -----------------------------
 
-_monetize() {
-  # TODO waiting on approval for Content ID API
-  _create_asset
-  _set_asset_ownership
-  _claim_video
-  _set_advertising
-}
-_m() { _monetize "$@"; }
-
-_live () {
-  echo "https://youtu.be/$(_liveid)"
+x_pending() {
+  case "$1" in 
+    prep)
+      for i in $(x_pending); do
+        mv $i "$YOUTUBE_RECORDINGS/$(zet for "$i").mkv" || true
+      done
+      ;;
+    *) find "$YOUTUBE_RECORDINGS" -type f ;;
+  esac
 }
 
-_liveid () {
+x_live () {
+  echo "https://youtu.be/$(x_liveid)"
+}
+
+x_liveid () {
  curl -s \
    "https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id&broadcastStatus=active&key=${YOUTUBE_APIKEY}" \
   -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
@@ -92,7 +47,16 @@ _liveid () {
   jq -r '.items[0].id'
 }
 
-_uploads() {
+# Uploaded shows the most recently uploaded videos (from the
+# contentDetails.related.Playlists.uploads playlist). By default will
+# only show enough to fill the current terminal screen (tput lines - 2).
+# Keep in mind, this only works if title length has been kept to 72 or
+# fewer columns. Provide an argument with the total number if more lines
+# are are wanted.
+
+x_uploaded() {
+  local lines=$(( $(tput lines) - 2 ))
+  [[ -n "$1" ]] && lines="$1"
   local pl=$(curl -s \
    "https://www.googleapis.com/youtube/v3/channels?part=contentDetails&key=${YOUTUBE_APIKEY}&mine=true" \
   -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
@@ -100,15 +64,16 @@ _uploads() {
   --compressed |
   jq -r '.items[0].contentDetails.relatedPlaylists.uploads')
   curl -s \
-   "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=${YOUTUBE_APIKEY}&playlistId=$pl&maxResults=40" \
+   "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=${YOUTUBE_APIKEY}&playlistId=$pl&maxResults=$lines" \
    -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
   -H "Accept: application/json" \
   --compressed  |
-  jq -r '.items[].snippet | .publishedAt + " " + .resourceId.videoId + " " + .title'
+  jq -r '.items[].snippet | .resourceId.videoId + " " + .title'
+  #jq -r '.items[].snippet | .publishedAt + " " + .resourceId.videoId + " " + .title'
 }
-_u() { _uploads "$@"; }
+x_u() { x_uploaded "$@"; }
 
-_video() {
+x_video() {
   local ytid="${1##*/}"
   curl -s \
    "https://www.googleapis.com/youtube/v3/videos?part=snippet,fileDetails,contentDetails,statistics,status,id,liveStreamingDetails,player,processingDetails,recordingDetails,suggestions,topicDetails,localizations&key=${YOUTUBE_APIKEY}&id=$ytid" \
@@ -116,35 +81,37 @@ _video() {
   -H "Accept: application/json" \
   --compressed | jq -r '.items[0]'
 }
-_v() { _video "$@"; }
+x_v() { x_video "$@"; }
 
-_open () {
+x_open () {
   local what="$1"
   case $what in 
     # TODO drop dependency on external open, create _openit
-    last) open "$(_last)" ;;
-    live) open "$(_live)" ;;
+    last) open "$(x_last)" ;;
+    live) open "$(x_live)" ;;
     *) open "https://youtu.be/$what";;
   esac
 }
-_o() { _open "$@"; }
+x_o() { x_open "$@"; }
 
-_last() {
+x_last() {
   local what="$1"
   case $what in 
-    rec*) _newest "${YOUTUBE_RECORDINGS}";;
-    *) l=$(_uploads | head -1); echo "https://youtu.be/${l:21:11}" ;;
+    rec*) x_newest "${YOUTUBE_RECORDINGS}";;
+    uploaded|*)
+      local l=$(x_uploaded | head -1)
+      echo "https://youtu.be/${l%% *}" ;;
   esac
 }
 
-_usage() {
+x_usage() {
     local cmds="${COMMANDS[@]}"
     printf "usage: ${0##*/} (${cmds// /|})\n"
 }
 
-_set_title() {
+x_set_title() {
   local id="$1"
-  [[ $id == live ]] && id=$(_liveid)
+  [[ $id == live ]] && id=$(x_liveid)
   shift;
   curl -s --compressed -X PUT \
    "https://www.googleapis.com/youtube/v3/videos?part=snippet&key=${YOUTUBE_APIKEY}" \
@@ -154,17 +121,17 @@ _set_title() {
   --data-raw '{"id": "'"$id"'", "snippet": {"title": "'"$*"'", "categoryId":"28"} }' | jq -r '.snippet.title'
 }
 
-_title() {
+x_title() {
   local ytid="${1##*/}"
-  [[ $ytid == live ]] && ytid=$(_liveid)
+  [[ $ytid == live ]] && ytid=$(x_liveid)
   if [[ $# > 1 ]]; then
-    _set_title "$@"
+    x_set_title "$@"
     return $?
   fi
   if [[ -z "$ytid" ]]; then
     local IFS=$'\n'
     while read -r line; do
-      _title $line
+      x_title $line
     done
     return 0
   fi
@@ -175,13 +142,13 @@ _title() {
   --compressed | 
   jq -r '.items[0].snippet.title'
 }
-_t() { _title "$@"; }
+x_t() { x_title "$@"; }
 
-_set_desc() {
+x_set_desc() {
   local id="$1"
-  [[ $id == live ]] && id=$(_liveid)
+  [[ $id == live ]] && id=$(x_liveid)
   shift;
-  local title=$(_title "$id")
+  local title=$(x_title "$id")
   local desc="$*"
   local eol=$'\n'
   desc=${desc//$eol/\\n}
@@ -193,17 +160,17 @@ _set_desc() {
   --data-raw '{"id": "'"$id"'", "snippet": {"title": "'"$title"'","categoryId":"28", "description": "'"$desc"'"} }' | jq -r '.snippet.description'
 }
 
-_description() {
+x_description() {
   local ytid="${1##*/}"
-  [[ $ytid == live ]] && ytid=$(_liveid)
+  [[ $ytid == live ]] && ytid=$(x_liveid)
   if [[ $# > 1 ]]; then
-    _set_desc "$@"
+    x_set_desc "$@"
     return $?
   fi
   if [[ -z "$ytid" ]]; then
     local IFS=$'\n'
     while read -r line; do
-      _description $line
+      x_description $line
     done
     return 0
   fi
@@ -214,14 +181,14 @@ _description() {
   --compressed | 
   jq -r '.items[0].snippet.description'
 }
-_d() { _description "$@"; }
+x_d() { x_description "$@"; }
 
-_name() {
+x_name() {
   local ytid="${1##*/}"
   if [[ -z "$ytid" ]]; then
     local IFS=$'\n'
     while read -r line; do
-      _name "$line"
+      x_name "$line"
     done
     return 0
   fi
@@ -232,14 +199,14 @@ _name() {
   --compressed | 
   jq -r '.items[0].fileDetails.fileName'
 }
-_n() { _name "$@"; }
+x_n() { x_name "$@"; }
 
-_file() {
+x_file() {
   local ytid="${1##*/}"
   if [[ -z "$ytid" ]]; then
     local IFS=$'\n'
     while read -r line; do
-      _file "$line"
+      x_file "$line"
     done
     return 0
   fi
@@ -250,18 +217,18 @@ _file() {
   --compressed | 
   jq -r '.items[0].fileDetails'
 }
-_f() { _file "$@"; }
+x_f() { x_file "$@"; }
 
-_zet() {
+x_zet() {
   local ytid="$1"
-  if [[ -z $ytid ]]; then
+  if [[ -z "$ytid" ]]; then
     local IFS=$'\n'
     while read -r line; do
-      _zet "$line"
+      x_zet "$line"
     done
     return 0
   fi
-  local video=$(_video "$ytid")
+  local video=$(x_video "$ytid")
   local name=$(jq -r ".fileDetails.fileName" <<< "$video")
   local desc=$(jq -r ".snippet.description" <<< "$video")
   if [[ $name =~ ^([0-9]{14,})\.mkv ]]; then
@@ -274,8 +241,13 @@ _zet() {
   fi
 }
 
-_sync() {
-  local id="${1##*/}" zetid ytid
+x_sync() {
+  local id zetid ytid
+  if [[ $1 = last ]]; then
+    id=$(x_last)
+  else
+    id="${1##*/}"
+  fi
   if [[ ${#id} = 14 ]]; then
     zetid="$id"
     ytid=$(zet video "$id")
@@ -289,8 +261,6 @@ _sync() {
   local desc=$(zet body "$zetid")$'\n'$(snip text/ytfoot)$'\n\n'"[ZETID:$zetid]"$'\n'"https://github.com/rwxrob/zet/tree/main/$zetid"
   local eol=$'\n'
   desc=$(jq -R -s -c <<< "$desc")
-  zet video "$zetid" "https://youtu.be/$ytid"
-  # TODO add the video link to the zet description
   local resp=$(curl -s --compressed -X PUT \
    "https://www.googleapis.com/youtube/v3/videos?part=snippet,status&key=${YOUTUBE_APIKEY}" \
   -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
@@ -299,17 +269,32 @@ _sync() {
   --data-raw '{"id": "'"$ytid"'", "status":{"privacyStatus":"public"},"snippet": {"title": "'"$title"'","categoryId":"28", "description": '"$desc"'} }')
   local err=$(jq -r '.error.errors[0].message' <<< "$resp")
   [[ $err != null ]] && echo "$err" && return 1
+  zet video "$zetid" "$ytid" > /dev/null
   echo "👍 synced $zetid -> https://youtu.be/$ytid"
 }
 
-# ---------------------------- delegation ----------------------------
+# --------------------- completion and delegation --------------------
+
+declare -a COMMANDS=()
+
+while read -r line; do
+    [[ $line =~ ^declare\ -f\ x_ ]] || continue
+    COMMANDS+=( ${line##declare -f x_} )
+done < <(declare -F)
+
+if [[ -n $COMP_LINE ]]; then
+    for c in "${COMMANDS[@]}"; do
+        [[ ${c:0:${#2}} == "${2,,}" ]] && echo "$c"
+    done
+    exit
+fi
 
 declare cmd="$1"; shift
 for c in "${COMMANDS[@]}"; do
     if [[ $c == "$cmd" ]]; then
-        "_$cmd" "$@"
+        "x_$cmd" "$@"
         exit $?
     fi
 done
 
-_usage "$@"
+x_usage "$@"

@@ -7,21 +7,19 @@ set -e
 # created (because the OBS developers didn't feel the need to included
 # the timezone/offset in the time stamp, maybe I'll add it someday). 
 
-mkv2isosec() {
-    local file="$1"
-    local name=${file##*/}
-    name=${name//[-_]/}
-    local newname="$(date +%Y%m%d%H%M%S -u -d "$(isosec2plain "$name") $(date +%z)").mkv"
-    if [[ $file =~ \/ ]]; then
-        echo "${file%/*}/$newname"
-    else
-        echo "$newname"
-    fi
+convert() {
+    local path=${1%/*}
+    local sec=${1##*/}
+    local sec=${sec//[-_]/}
+    local newname="$(date +%Y%m%d%H%M%S -u -d "$(isosec2plain "$sec") $(date +%z)").mkv"
+    echo  "$1 -> $path/$newname"
+    mv "$1" "$path/$newname" || true
+    return 0
 }
 
-[[ -n $1 ]] && mkv2isosec "$1" && exit $?
+[[ -n $1 ]] && convert "$1" && exit $?
 
 IFS=$'\n'
 while read -r line; do 
-    mkv2isosec "$line"
+    convert "$line"
 done
