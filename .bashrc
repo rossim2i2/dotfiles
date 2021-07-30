@@ -19,6 +19,7 @@ export GITUSER="rossim2i2"
 export DOTFILES="$HOME/repos/github.com/$GITUSER/dotfiles"
 export SNIPPETS="$HOME/repos/github.com/$GITUSER/dotfiles/snippets"
 export GHREPOS="$HOME/repos/github.com/$GITUSER/"
+export HELP_BROWSER=lynx
 
 export TERM=xterm-256color
 export HRULEWIDTH=73
