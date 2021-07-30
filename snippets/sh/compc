@@ -1,4 +1,6 @@
 #!/usr/bin/bash
+# shellcheck disable=SC2016
+set -e
 
 declare -A help
 
@@ -18,6 +20,10 @@ x_usage() {
     printf "usage: %s (%s)\n" "${0##*/}" "${cmds// /|}"
 }
 
+help[help]='
+The `help` command prints help information for this script or the
+specific command (first argument).'
+
 x_help() { 
   local name=${1:-main} 
   local file="/tmp/$name-help.html"
@@ -30,11 +36,13 @@ x_help() {
 }
 
 x_foo() {
-    echo would foo
+  _filter "$@"
+  echo "would foo: $*"
 }
 
 x_foo_bar() {
-    echo would foo bar
+  _filter "$@"
+  echo "would foo bar: $*"
 }
 
 _make_html() {
@@ -47,7 +55,14 @@ _make_html() {
 
 # --------------------- completion and delegation --------------------
 
-while read -r line; do
+_filter(){
+  (( $# > 0 )) && return 0
+  while IFS= read -ra args; do
+    "${FUNCNAME[1]}" "${args[@]}"
+  done
+}
+
+while IFS= read -r line; do
     [[ $line =~ ^declare\ -f\ x_ ]] || continue
     COMMANDS+=( "${line##declare -f x_}" )
 done < <(declare -F)
@@ -60,10 +75,18 @@ if [[ -n $COMP_LINE ]]; then
     exit
 fi
 
-declare cmd="$1"; shift
+EXE="${0##*/}"
 for c in "${COMMANDS[@]}"; do
-    if [[ $c == "$cmd" ]]; then
-        "x_$cmd" "$@"
+    if [[ $c == "$EXE" ]]; then
+        "x_$EXE" "$@"
+        exit $?
+    fi
+done
+
+CMD="$1"; shift
+for c in "${COMMANDS[@]}"; do
+    if [[ $c == "$CMD" ]]; then
+        "x_$CMD" "$@"
         exit $?
     fi
 done
