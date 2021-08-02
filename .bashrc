@@ -18,6 +18,7 @@ esac
 export GITUSER="rossim2i2"
 export DOTFILES="$HOME/repos/github.com/$GITUSER/dotfiles"
 export SNIPPETS="$HOME/repos/github.com/$GITUSER/dotfiles/snippets"
+export CLIP_DATA="$HOME/repos/github.com/$GITUSER/dotfiles/clip/data"
 export GHREPOS="$HOME/repos/github.com/$GITUSER/"
 export HELP_BROWSER=lynx
 
@@ -224,7 +225,7 @@ fi
 
 # ------------- source external dependencies / completion ------------
 
-owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log todo ./setup)
+owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log todo yt clip ./setup)
 for i in ${owncomp[@]}; do complete -C $i $i; done
 
 type gh &>/dev/null && . <(gh completion -s bash)
@@ -264,6 +265,7 @@ alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
 alias ssn='sudo shutdown now'
 alias temp='cd $(mktemp -d)'
 alias view='vi -R'
+alias coin="clip '(yes|no)'"
 
 which vim &>/dev/null && alias vi=vim
 
