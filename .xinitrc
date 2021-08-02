@@ -50,8 +50,7 @@ setxkbmap -option caps:escape &
 volumeicon &
 export AWT_TOOLKIT=MToolkit
 export QT_QPA_PLATFORMTHEME=qt5ct
-xrandr --output DisplayPort-0 --auto --output DisplayPort-1 --mode 2560x1440 --rate 144 --left-of DisplayPort-0 &
-
+xrandr --output DisplayPort-0 --mode 5120x1440 --rate 119.97 --output DisplayPort-1 --mode 2560x1440 --rate 144 --left-of DisplayPort-0
 # exec bspwm
 # exec xmonad
 exec qtile start
