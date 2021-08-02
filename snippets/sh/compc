@@ -2,6 +2,14 @@
 # shellcheck disable=SC2016
 set -e
 
+# Copyright 2021 Rob Muhlestein <rob@rwx.gg>
+# Released under Apache-2.0 license
+# Please mention https://youtube.com/rwxrob
+
+: ${PAGER:=more}
+: ${EDITOR:=vi}
+EXE="${0##*/}"
+
 declare -A help
 
 help[main]='
@@ -15,26 +23,6 @@ Begin functions with x_ to allow useful command names to be used that
 would otherwise conflict with existing system and bash keywords.
 '
 
-x_usage() {
-    local cmds="${COMMANDS[*]}"
-    printf "usage: %s (%s)\n" "${0##*/}" "${cmds// /|}"
-}
-
-help[help]='
-The `help` command prints help information for this script or the
-specific command (first argument).'
-
-x_help() { 
-  local name=${1:-main} 
-  local file="/tmp/$name-help.html"
-  if [[ -n "$HELP_BROWSER" ]];then
-    _make_html "$name"
-    exec "$HELP_BROWSER" "$file"
-  else
-    pandoc -s -t plain  <<< "${help[${1:-main}]}" | more
-  fi
-}
-
 x_foo() {
   _filter "$@"
   echo "would foo: $*"
@@ -45,15 +33,49 @@ x_foo_bar() {
   echo "would foo bar: $*"
 }
 
-_make_html() {
-  local name=${1:-main}
+x_usage() {
+    local cmds="${COMMANDS[*]}"
+    printf "usage: %s (%s)\n" "${0##*/}" "${cmds// /|}"
+}
+
+help[help]='
+The `help` command prints help information. If no argument is passed
+displays general help information (main). Otherwise, the documentation
+for the specific argument keyword is displayed, which usually
+corresponds to a command name (but not necessarily). All documentation
+is written in CommonMark (Markdown) and will displayed as Web page if
+`pandoc` and `$HELP_BROWSER` are detected, otherwise, just the Markdown is
+sent to `$PAGER` (default: more).'
+
+x_help() { 
+  local name="$1"
+  if [[ -z "$name" ]];then
+    for c in "${COMMANDS[@]}";do
+      x_help "$c" buildonly
+    done
+    x_help main
+    return 0
+  fi
   local title="$EXE $name"
   [[ $name = main ]] && title="$EXE"
-  pandoc -s --metadata title="$title" \
-    -o "/tmp/$name-help.html" <<< "${help[$name]}"
+  local file="/tmp/help-$EXE-$name.html"
+  if _have pandoc ; then
+    if _have "$HELP_BROWSER" ;then
+      pandoc -s --metadata title="$title" \
+        -o "$file" <<< "${help[$name]}"
+      [[ -z "$2" ]] && cd /tmp && exec "$HELP_BROWSER" "$file"
+      return 0
+    fi
+    pandoc -s --metadata title="$title" \
+      -t plain <<< "${help[$name]}" | "$PAGER"
+    return 0
+  fi
+  echo "${help[$name]}" | "$PAGER"
 }
 
 # --------------------- completion and delegation --------------------
+
+_have(){ type "$1" &>/dev/null; }
 
 _filter(){
   (( $# > 0 )) && return 0
@@ -75,7 +97,6 @@ if [[ -n $COMP_LINE ]]; then
     exit
 fi
 
-EXE="${0##*/}"
 for c in "${COMMANDS[@]}"; do
     if [[ $c == "$EXE" ]]; then
         "x_$EXE" "$@"
@@ -83,10 +104,10 @@ for c in "${COMMANDS[@]}"; do
     fi
 done
 
-CMD="$1"; shift
+declare cmd="$1"; shift
 for c in "${COMMANDS[@]}"; do
-    if [[ $c == "$CMD" ]]; then
-        "x_$CMD" "$@"
+    if [[ $c == "$cmd" ]]; then
+        "x_$cmd" "$@"
         exit $?
     fi
 done
