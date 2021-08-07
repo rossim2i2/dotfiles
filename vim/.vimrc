@@ -67,7 +67,7 @@ set nowritebackup
 set icon
 
 " center the cursor always on the screen
-"set scrolloff=999
+set scrolloff=999
 
 " highlight search hits
 set hlsearch
