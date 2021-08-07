@@ -33,6 +33,11 @@ x_foo_bar() {
   echo "would foo bar: $*"
 }
 
+x__hidden() {
+  _filter "$@"
+  echo "would run _hidden: $*"
+}
+
 x_usage() {
     local cmds="${COMMANDS[*]}"
     printf "usage: %s (%s)\n" "${0##*/}" "${cmds// /|}"
@@ -92,7 +97,7 @@ done < <(declare -F)
 if [[ -n $COMP_LINE ]]; then
     line=${COMP_LINE#* }
     for c in "${COMMANDS[@]}"; do
-        [[ ${c:0:${#line}} == "${line,,}" ]] && echo "$c"
+        [[ ${c:0:${#line}} == "${line,,}" && ${c:1:1} != _ ]] && echo "$c"
     done
     exit
 fi
