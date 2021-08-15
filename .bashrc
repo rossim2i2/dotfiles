@@ -225,7 +225,7 @@ fi
 
 # ------------- source external dependencies / completion ------------
 
-owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log todo yt clip ./setup)
+owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log todo yt clip ./setup ./cmd)
 for i in ${owncomp[@]}; do complete -C $i $i; done
 
 type gh &>/dev/null && . <(gh completion -s bash)
@@ -234,22 +234,23 @@ type kubectl &>/dev/null && . <(kubectl completion bash)
 type kind &>/dev/null && . <(kind completion bash)
 #type yq &>/dev/null && . <(yq completion bash)
 
+# ----------------- consistent, lexicographical sort -----------------
+#                (seriously, don't use sort without it)
+
+export LC_COLLATE=C
+
 # ------------------------------ aliases -----------------------------
+#      (use exec scripts instead, which work from vim and subprocs)
 
 unalias -a
 alias d=docker
 alias k=kubectl
-alias grep='grep -i --colour=auto'
-alias egrep='egrep -i --colour=auto'
-alias fgrep='fgrep -i --colour=auto'
-alias curl='curl -L'
 alias ls='ls -h --color=auto'
 alias lsa='exa -al --color=always --group-directories-first'
 alias '?'=duck
 alias '??'=google
 alias '???'=bing
 alias x='exit'
-alias sl='sl -e'
 alias mkdirisosec='d=$(isosec);mkdir $d; cd $d'
 alias main='cd $(work main)'
 alias dot='cd ~/repos/github.com/$GITUSER/dotfiles'
@@ -257,12 +258,10 @@ alias scripts='cd $SCRIPTS'
 alias snippets='cd $SNIPPETS'
 alias free='free -h'
 alias df='df -h'
-alias top=htop
 alias chmox='chmod +x'
 alias pacup='sudo pacman -Syu'                    # update standard packages
 alias parup='paru -Syu'                           # update aur pakcages
 alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
-alias ssn='sudo shutdown now'
 alias temp='cd $(mktemp -d)'
 alias view='vi -R'
 alias coin="clip '(yes|no)'"
@@ -295,15 +294,26 @@ envx() {
 
 test -e ~/.env && envx ~/.env
 
-newcmd() { 
+newcmdbox() { 
   name="$1"
-  test -z "$name" && echo "usage: newcmd <name>" && return 1
+  test -z "$name" && echo "usage: newcmdbox <name>" && return 1
   test -z "$GHREPOS" && echo "GHREPOS not set" && return 1
   test ! -d "$GHREPOS" && echo "Not found: $GHREPOS" && return 1
   test -e "cmdbox-$name" && echo "exists: cmdbox-$name" && return 1
   cd "$GHREPOS"
-  gh repo create -p rwxrob/cmdbox-_foo "cmdbox-$name"
+  gh repo create -p rwxrob/template-cmdbox "cmdbox-$name"
   cd "cmdbox-$name"
+} && export -f newcmd
+
+newcmd() {
+  name="$1"
+  test -z "$name" && echo "usage: newcmd <name>" && return 1
+  test -z "$GHREPOS" && echo "GHREPOS not set" && return 1
+  test ! -d "$GHREPOS" && echo "Not found: $GHREPOS" && return 1
+  test -e "cmd-$name" && echo "exists: cmd-$name" && return 1
+  cd "$GHREPOS"
+  gh repo create -p rwxrob/template-bash-command "cmd-$name"
+  cd "cmd-$name"
 } && export -f newcmd
 
 # -------------------- personalized configuration --------------------
