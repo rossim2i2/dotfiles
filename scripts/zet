@@ -13,10 +13,12 @@ declare -A help # associative arrays *require* declaration
 : "${HELP_BROWSER:=}"
 : "${GITUSER:=$USER}"
 : "${GITBRANCH:=main}"
-: "${ZETDIR:=$GHREPOS/$EXE}"
+: "${ZETDIR:=$GHREPOS/zet}"
 : "${ZETCASTDIR:=$HOME/Videos/ZettelCasts}"
 : "${ZETCASTFOOT:=}"
 : "${ZETCASTCAT:=28}" # Science and Techology
+
+EXE=${0##*/}
 
 # ------------------------- utility functions ------------------------
 
@@ -130,7 +132,7 @@ command__cast_start() {
   _have pomo && pomo duration 10m
   local zetid=$(command_isosec)
   mkdir "/tmp/$zetid"
-  echo -e "# $*\n\n*remember to start recording*\n\n1. Scenario\n2. Solution\n3. Steps\n4. Summary\n" > "/tmp/$zetid/README.md"
+  echo -e "# $*\n\n*remember to turn off music, start recording*\n\n1. Scenario\n2. Solution\n3. Steps\n4. Summary\n" > "/tmp/$zetid/README.md"
   local zetid
   zetid=$(command_import "/tmp/$zetid")
   (( $? == 0 )) && rm -rf "$zetid"
@@ -205,10 +207,10 @@ command__cast_pending_ids() {
   done < <(command__cast_pending)
 }
 
-
 command__cast_pending_post() {
   while IFS= read -r id;do
-    command_post "$id"
+    read -u 2 -p "Tags for '$(command_title "$id")'? " -a tags
+    command_post "$id" "${tags[@]}"
   done < <(command__cast_pending_ids)
 }
 
@@ -222,37 +224,40 @@ command__cast_pending_archive() {
 command__cast_pending_publish() {
   read -p 'Everything uploaded to YouTube from Pending? ' resp
   [[ $resp =~ ^[yY] ]] || return 1
-  command_uploads_sync
-  command__cast_pending
+  command__cast_uploads_sync
+  command__cast_pending_post
   command__cast_pending_archive
+  echo "Don't forget to activate monetization from YouTube GUI."
 }
 
 command_post() {
   _filter "$@" && return $?
   ! _have post && echo '<post command not found>' && return 1
-  [[ $1 = last ]] && zetid=$(command_last)
+  local zetid="$1"
+  [[ $zetid = last ]] && zetid=$(command_last)
   [[ -z "$zetid" ]] && echo '<zetid required>' && return 1
   local title video tags buf
   title=$(command_title "$zetid") || (echo '<title empty>' && return 1)
-  video=$(command_yt "$zetid") || true
+  video=$(command_video "$zetid") || true
   [[ ${video:0:1} = '<' ]] && video=''
   zeturl=$(command_url "$zetid")
   shift;
-  tags=($@)
+  tags=($(command_tag "$zetid") $@)
   tags="${tags[@]/#/\#}"
   if [[ -n "$video" ]];then
     buf+="📺 "
   else
     buf+="📜 "
   fi
-  buf+="$title"
+  local n=$'\n'
+  buf+="$title$n$n"
   if [[ -n "$video" ]];then
-    buf+=" $video #livestream "
+    buf+="$video$n$n"
   else
-    buf+=" $zeturl "
+    buf+="$zeturl$n$n"
   fi
-  [[ -n "$tags" ]] && buf+="$tags"
-  printf "$buf\n"
+  [[ -n "$tags" ]] && buf+="$tags$n"
+  printf "%s\n" "$buf"
   post "$buf"
 }
 
@@ -278,9 +283,9 @@ command__cast_sync() {
   else
     id="${1##*/}"
   fi
-  if [[ ${#id} = 14 ]]; then
+  if [[ $id =~ ^[0-9]{14,}$ ]]; then
     zetid="$id"
-    ytid=$(command_yt "$id")
+    ytid=$(command_video "$zetid") || true
     ytid=${ytid##*/}
   else
     ytid="$id"
@@ -292,19 +297,20 @@ command__cast_sync() {
   [[ -z "$zetid" ]] && echo '<failed to lookup zetid>' && return 1
   local title=$(command_title "$zetid")
   local body=$(command_body "$zetid" codeless)
-  local zeturl="https://github.com/$GITUSER/$EXE/tree/$GITBRANCH/$zetid"
+  local zeturl="https://github.com/$GITUSER/zet/tree/$GITBRANCH/$zetid"
   [[ -n "$ZETCASTFOOT" ]] && foot=$(command_body "$ZETCASTFOOT")
   desc="$body$n$n$foot$n$n[ZETID:$zetid]$n$zeturl"
   yt publish "$ytid" "$title" "$desc" "$ZETCASTCAT"
-  command_yt "$zetid" "$ytid" > /dev/null
+  command_video "$zetid" "$ytid" > /dev/null
   echo "👍 synced $zetid -> https://youtu.be/$ytid"
 }
 
 help[import]='
 The `import` command copies an exactly duplicate of the directory passed
 as the first argument. The first argument is assumed to be a unique
-zettel identifier (isosec). (Note that in the extemely unlikely event that an identifier conflicts, the import will fail.)
-'
+zettel identifier (isosec). (Note that in the extemely unlikely event
+that an identifier conflicts, the import will fail.) '
+
 command_import() {
     _filter "$@" && return $?
     local dir="$(command_dir)"
@@ -315,7 +321,9 @@ command_import() {
 }
 
 help[delete]='
-The `delete` command removes the indicated zettel directory from the zet repo and directory, and commits and pushes the removal. The word "last" can be used instead of a zettel identifier for convenience.'
+The `delete` command removes the indicated zettel directory from the zet
+repo and directory, and commits and pushes the removal. The word "last"
+can be used instead of a zettel identifier for convenience.'
 
 command_delete() {
     _filter "$@" && return $?
@@ -336,9 +344,10 @@ command_delete() {
 }
 
 command_url() {
+  _filter "$@" && return $?
   local zetid="$1"
   [[ -z "$zetid" || $zetid = last ]] && zetid=$(command_last)
-  echo "https://github.com/$GITUSER/$EXE/tree/$GITBRANCH/$zetid"
+  echo "https://github.com/$GITUSER/zet/tree/$GITBRANCH/$zetid"
 }
 
 command_open() { 
@@ -358,16 +367,15 @@ command_commit() {
   # git commit keeping title as commit message 
   local title
   title=$(command_title "$1")
-  cd "$dir" &>/dev/null
-  git add -A "$dir" &>/dev/null
-  git commit -m "$title" &>/dev/null || true
-  git push &>/dev/null
-  echo Commited.
-  cd - &>/dev/null
+  cd "$dir"
+  git add -A "$dir"
+  git commit -m "$title"
+  git push
+  cd -
 
 }
 
-command_yt() {
+command_video() {
   _filter "$@" && return $?
 
   # accept zet or yt ids  
@@ -394,6 +402,7 @@ command_yt() {
 
     # update if ytid 
     if [[ -n "$ytid" ]]; then
+      # FIXME following needs to be non-provider specific
       echo -e "3c\n📺 <https://youtu.be/$ytid>\n.\nwq" | ed "$readme" >/dev/null
       changed=1
 
@@ -492,7 +501,16 @@ command_edit() {
   [[ $resp =~ ^[yY] ]] && command_commit "$zetid"
 }
 
-command_titles() {
+command_dex() {
+  case $1 in 
+    titles) shift;command__dex_titles "$@"; return $?;;
+    tags) shift;command__dex_tags "$@"; return $?;;
+  esac
+}
+
+command_titles() { command__dex_titles; }
+
+command__dex_titles() {
   local dir buf title
   local -a zets
   dir=$(command_dir)
@@ -506,6 +524,53 @@ command_titles() {
     buf="$buf${i##*/} ${title#*# }  "$'\n'
   done
   pandoc -t plain --wrap=none <<< "$buf"
+}
+
+help[changes]='
+Outputs two columns of data: the second a zettel was changed, and the
+zettel ID. Because both of these can be read directly from the inode for
+the `$ZETDIR` directory the output is instantaneous. Because titles
+change and parsing them out adds unnecessary delay, this file will never
+included titles (use `titles` or `title` instead for that).  '
+
+command_changes() {
+  mapfile -t < <(
+    TZ=Z \
+    find "$ZETDIR" \
+    -maxdepth 2 \
+    -type d \
+    -path '*/2*' \
+    -printf "%CY%Cm%Cd%CH%CM%CS %f\n" \
+    | sort -rn
+  )
+  for i in "${MAPFILE[@]}"; do
+    echo "${i%%.*} ${i##* }"
+  done
+}
+
+command__mark_link() {
+  _filter "$@" && return $?;
+  local id="${1%% *}"
+  #TODO have it see $* as well
+  local title="${1#* }"
+  [[ -z "$title" ]] && title=$(command_title "$1")
+  echo "* [$id](/$id/) $title"
+}
+
+command__mark_url() {
+  _filter "$@" && return $?;
+  local id="${1%% *}"
+  #TODO have it see $* as well
+  local title="${1#* }"
+  [[ -z "$title" ]] && title=$(command_title "$1")
+  echo "* [$id]($(command_url "$id")) $title"
+}
+
+command_mark() {
+  case $1 in 
+    url) shift;command__mark_url "$@"; return $?;;
+    link) shift;command__mark_link "$@"; return $?;;
+  esac
 }
 
 command_last() {
@@ -545,13 +610,43 @@ command_source() {
 
 command_title() {
   _filter "$@" && return $?
+  local id="$1"
+  [[ $id = last ]] && id=$(command_last)
   local dir readme title
-  dir="$(command_dir)/$1"
+  dir="$(command_dir)/$id"
   [[ -d $dir ]] || return 1
   readme="$dir/README.md"
   read -r title < "$readme"
   [[ ! $title =~ ^#\  ]] && return 1
   pandoc -t plain --wrap=none <<< "${title#\# }"
+}
+
+command_tags() { command__dex_tags; }
+
+command__dex_tags() {
+  local buf tags n=$'\n'
+  mapfile -t ids < <(command_ids)
+  for i in "${ids[@]}";do
+    mapfile -t tags < <(command_tag "$i")
+    (( ${#tags[@]} > 0 )) || continue
+    buf+="$i ${tags[@]}$n"
+  done
+  echo -n "$buf"
+}
+
+command_tag() {
+  _filter "$@" && return $?
+  local id="$1"
+  [[ $id = last ]] && id=$(command_last)
+  local dir readme tags
+  dir="$(command_dir)/$id"
+  [[ -d $dir ]] || return 1
+  readme="$dir/README.md"
+  [[ -r $readme ]] || return 1
+  #TODO if more than first argument assume want to set
+  tag=$(tail -1 "$readme")
+  [[ $tag =~ ^\ {4,}(#.+) ]] || return 0
+  echo "${BASH_REMATCH[1]//#/}"
 }
 
 command_body() {
@@ -746,12 +841,12 @@ command_readme() {
   _trim "${help[main]}"
   local usage="$(command_usage)"
   printf "\n## Commands\n\n"
-  local -a names=("${!help[@]}")
   while IFS= read -r name; do
+    local body
     [[ $name = main ]] && continue
-    local body=$(_trim "${help[$name]}")
+    body=$(_trim "${help[$name]}")
     [[ $body =~ ^\# ]] || body="# The \`$name\` Command\n\n$body"
-    printf "##$body\n\n"
+    printf "##%s\n\n" "$body"
   done < <(printf "%s\n" "${!help[@]}" | LC_COLLATE=C sort)
   echo -e "----\n\n*Autogenerated $(date)*\n"
 }
