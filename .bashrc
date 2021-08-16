@@ -1,9 +1,5 @@
-#   __  __ _      _                _   _____               _
-#  |  \/  (_)    | |              | | |  __ \             (_)
-#  | \  / |_  ___| |__   __ _  ___| | | |__) |___  ___ ___ _
-#  | |\/| | |/ __| '_ \ / _` |/ _ \ | |  _  // _ \/ __/ __| |
-#  | |  | | | (__| | | | (_| |  __/ | | | \ \ (_) \__ \__ \ |
-#  |_|  |_|_|\___|_| |_|\__,_|\___|_| |_|  \_\___/|___/___/_|
+#!/usr/bin/bash
+# shellcheck disable=SC1090
 
 test -e /etc/bashrc && source /etc/bashrc
 
@@ -12,14 +8,37 @@ case $- in
 *) return ;;
 esac
 
+# ---------------------- local utility functions ---------------------
+
+_have()      { type "$1" &>/dev/null; }
+_source_if() { [[ -r "$1" ]] && source "$1"; }
+
 # ----------------------- environment variables ----------------------
 
 #export GITUSER="$USER"
 export GITUSER="rossim2i2"
-export DOTFILES="$HOME/repos/github.com/$GITUSER/dotfiles"
-export SNIPPETS="$HOME/repos/github.com/$GITUSER/dotfiles/snippets"
-export CLIP_DATA="$HOME/repos/github.com/$GITUSER/dotfiles/clip/data"
-export GHREPOS="$HOME/repos/github.com/$GITUSER"
+export REPOS="$HOME/repos"
+export GHREPOS="$REPOS/github.com/$GITUSER"
+export KN="$GHREPOS"
+export DOTFILES="$GHREPOS/dotfiles"
+export SCRIPTS="$DOTFILES/scripts"
+export SNIPPETS="$DOTFILES/snippets"
+export DESKTOP="$HOME/Desktop"
+export DOCUMENTS="$HOME/Documents"
+export DOWNLOADS="$HOME/Downloads"
+export TEMPLATES="$HOME/Templates"
+export PUBLIC="$HOME/Public"
+export PRIVATE="$HOME/Private"
+export MUSIC="$HOME/Music"
+export VIDEOS="$HOME/Videos"
+export PDFS="$DOCUMENTS/PDFS"
+export VIRTUALMACHINES="$HOME/VirtualMachines"
+export WORKSPACES="$HOME/Workspaces"
+export ZETDIR="$GHREPOS/zet"
+export ZETTELCASTS="$VIDEOS/ZettelCasts"
+export CLIP_DIR="$VIDEOS/Clips"
+export CLIP_DATA="$GHREPOS/cmd-clip/data"
+export CLIP_VOLUME=0
 export HELP_BROWSER=lynx
 
 export TERM=xterm-256color
@@ -28,23 +47,14 @@ export EDITOR=vim
 export VISUAL=vim
 export EDITOR_PREFIX=vim
 
-export PYTHONDONTWRITEBYTECODE=1
-
-test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
-
 export GOPRIVATE="github.com/$GITUSER/*,gitlab.com/$GITUSER/*"
-export GOPATH=~/.local/share/go
-export GOBIN=~/.local/bin
+export GOPATH=~"$HOME/.local/share/go"
+export GOBIN="$HOME/.local/bin"
 export GOPROXY=direct
 export CGO_ENABLED=0
 
-# ------------------------------- pager ------------------------------
-
-if test -x /usr/bin/lesspipe; then
-  export LESSOPEN="| /usr/bin/lesspipe %s";
-  export LESSCLOSE="/usr/bin/lesspipe %s %s";
-fi
-
+export PYTHONDONTWRITEBYTECODE=1 # fucking shit-for-brains var name
+export LC_COLLATE=C
 export LESS_TERMCAP_mb="[35m" # magenta
 export LESS_TERMCAP_md="[33m" # yellow
 export LESS_TERMCAP_me="" # "0m"
@@ -53,36 +63,52 @@ export LESS_TERMCAP_so="[34m" # blue
 export LESS_TERMCAP_ue="" # "0m"
 export LESS_TERMCAP_us="[4m"  # underline
 
+test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
+
+# ------------------------------- pager ------------------------------
+
+if [[ -x /usr/bin/lesspipe ]]; then
+  export LESSOPEN="| /usr/bin/lesspipe %s";
+  export LESSCLOSE="/usr/bin/lesspipe %s %s";
+fi
+
+# ----------------------------- dircolors ----------------------------
+
+if _have dircolors; then
+  if [[ -r "$HOME/.dircolors" ]]; then
+    eval "$(dircolors -b "$HOME/.dircolors")"
+  else
+    eval "$(dircolors -b)"
+  fi
+fi
+
 # ------------------------------- path -------------------------------
 
 pathappend() {
   for ARG in "$@"; do
-    test -d "${ARG}" || continue
-    PATH=${PATH//:${ARG}:/:}
-    PATH=${PATH/#${ARG}:/}
-    PATH=${PATH/%:${ARG}/}
-    export PATH="${PATH:+"${PATH}:"}${ARG}"
+    test -d "$arg" || continue
+    PATH=${PATH//":$arg:"/:}
+    PATH=${PATH/#"$arg:"/}
+    PATH=${PATH/%":$arg"/}
+    export PATH="${PATH:+"$PATH:"}$arg"
   done
 }
 
 pathprepend() {
-  for ARG in "$@"; do
-    test -d "${ARG}" || continue
-    PATH=${PATH//:${ARG}:/:}
-    PATH=${PATH/#${ARG}:/}
-    PATH=${PATH/%:${ARG}/}
-    export PATH="${ARG}${PATH:+":${PATH}"}"
+  for arg in "$@"; do
+    test -d "$arg" || continue
+    PATH=${PATH//:"$arg:"/:}
+    PATH=${PATH/#"$arg:"/}
+    PATH=${PATH/%":$arg"/}
+    export PATH="$arg${PATH:+":${PATH}"}"
   done
 }
 
-# Override as needed in .bashrc_{personal,private,work}
-# Serveral utilities depend on SCRIPTS being in a github repo
-export SCRIPTS=~/.local/bin/scripts
-test ! -d "$SCRIPTS" && mkdir -p "$SCRIPTS"
-
+# remember last arg will be first in path
 pathprepend \
-  ~/.local/bin \
   /usr/local/go/bin \
+  "$HOME/.local/bin" \
+  "$GHREPOS/cmd-"* \
   "$SCRIPTS"
 
 pathappend \
@@ -99,13 +125,7 @@ pathappend \
 
 # ------------------------------ cdpath ------------------------------
 
-export CDPATH=.:\
-~/repos/github.com:\
-~/repos/github.com/$GITUSER:\
-~/repos/github.com/$GITUSER/dot:\
-~/repos:\
-/media/$USER:\
-~
+export CDPATH=".:$GHREPOS:$DOT:$REPOS:/media/$USER:$HOME"
 
 # ------------------------ bash shell options ------------------------
 
@@ -127,117 +147,49 @@ set -o vi
 shopt -s histappend
 
 # --------------------------- smart prompt ---------------------------
+#                 (keeping in bashrc for portability)
 
 PROMPT_LONG=50
 PROMPT_MAX=95
+PROMPT_AT=@
 
 __ps1() {
-  local P='$'
+  
+  local P='$' dir="${PWD##*/}" B countme short long double\
+    r='\[\e[31m\]' g='\[\e[30m\]' h='\[\e[34m\]' \
+    u='\[\e[33m\]' p='\[\e[33m\]' w='\[\e[35m\]' \
+    b='\[\e[36m\]' x='\[\e[0m\]'
 
-  if test -n "${ZSH_VERSION}"; then
-    local r='%F{red}'
-    local g='%F{black}'
-    local h='%F{blue}'
-    local u='%F{yellow}'
-    local p='%F{yellow}'
-    local w='%F{magenta}'
-    local b='%F{cyan}'
-    local x='%f'
-  else
-    local r='\[\e[31m\]'
-    local g='\[\e[30m\]'
-    local h='\[\e[34m\]'
-    local u='\[\e[33m\]'
-    local p='\[\e[33m\]'
-    local w='\[\e[35m\]'
-    local b='\[\e[36m\]'
-    local x='\[\e[0m\]'
-  fi
+  [[ $EUID == 0 ]] && P='#' && u=$r && p=$u # root
+  [[ $PWD = / ]] && dir=/
+  [[ $PWD = "$HOME" ]] && dir='~'
 
-  if test "${EUID}" == 0; then
-    P='#'
-    if test -n "${ZSH_VERSION}"; then
-      u='$F{red}'
-    else
-      u=$r
-    fi
-    p=$u
-  fi
+  B=$(git branch --show-current 2>/dev/null)
+  [[ $dir = "$B" ]] && B=.
+  countme="$USER$PROMPT_AT$(hostname):$dir($B)\$ "
 
-  local dir;
-  if test "$PWD" = "$HOME"; then
-    dir='~'
-  else
-    dir="${PWD##*/}"
-    if test "${dir}" = _; then
-      dir=${PWD#*${PWD%/*/_}}
-      dir=${dir#/}
-    elif test "${dir}" = work; then
-      dir=${PWD#*${PWD%/*/work}}
-      dir=${dir#/}
-    fi
-  fi
+  [[ $B = master || $B = main ]] && b="$r"
+  [[ -n "$B" ]] && B="$g($b$B$g)"
 
-  local B=$(git branch --show-current 2>/dev/null)
-  test "$dir" = "$B" && B='.'
-  local countme="$USER@$HOSTNAME:$dir($B)\$ "
+  short="$u\u$g$PROMPT_AT$h\h$g:$w$dir$B$p$P$x "
+  long="$g╔ $u\u$g$PROMPT_AT$h\h$g:$w$dir$B\n$g╚ $p$P$x "
+  double="$g╔ $u\u$g$PROMPT_AT$h\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
 
-  test "$B" = master -o "$B" = main && b=$r
-  test -n "$B" && B="$w($b$B$w)"
-
-  if test -n "${ZSH_VERSION}"; then
-    local short="$u%n$g@$h%m$g:$w$dir$B$p$P$x "
-    #local short="$h$dir$B$p$P$x "
-    local long="$g╔ $u%n$g@%m\h$g:$w$dir$B\n$g╚ $p$P$x "
-    local double="$g╔ $u%n$g@%m\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
-  else
-    local short="$u\u$g@$h\h$g:$w$dir$B$p$P$x "
-    #local short="$h$dir$B$p$P$x "
-    local long="$g╔ $u\u$g@$h\h$g:$w$dir$B\n$g╚ $p$P$x "
-    local double="$g╔ $u\u$g@$h\h$g:$w$dir\n$g║ $B\n$g╚ $p$P$x "
-  fi
-
-  if test ${#countme} -gt "${PROMPT_MAX}"; then
+  if (( ${#countme} > PROMPT_MAX )); then
     PS1="$double"
-  elif test ${#countme} -gt "${PROMPT_LONG}"; then
+  elif (( ${#countme} > PROMPT_LONG )); then
     PS1="$long"
   else
     PS1="$short"
   fi
 }
 
-#PROMPT_COMMAND="${PROMPT_COMMAND:+"$PROMPT_COMMAND;"}__ps1;"
 PROMPT_COMMAND="__ps1"
 
 # ----------------------------- keyboard -----------------------------
 
-test -n "$DISPLAY" && setxkbmap -option caps:escape &>/dev/null
-
-# ----------------------------- dircolors ----------------------------
-
-if command -v dircolors &>/dev/null; then
-  if test -r ~/.dircolors; then
-    eval "$(dircolors -b ~/.dircolors)"
-  else
-    eval "$(dircolors -b)"
-  fi
-fi
-
-# ------------- source external dependencies / completion ------------
-
-owncomp=(pdf md yt gl kn auth pomo config sshkey ws zet log todo yt clip ./setup ./cmd)
-for i in ${owncomp[@]}; do complete -C $i $i; done
-
-type gh &>/dev/null && . <(gh completion -s bash)
-type pandoc &>/dev/null && . <(pandoc --bash-completion)
-type kubectl &>/dev/null && . <(kubectl completion bash)
-type kind &>/dev/null && . <(kind completion bash)
-#type yq &>/dev/null && . <(yq completion bash)
-
-# ----------------- consistent, lexicographical sort -----------------
-#                (seriously, don't use sort without it)
-
-export LC_COLLATE=C
+_have setxkbmap && test -n "$DISPLAY" && \
+  setxkbmap -option caps:escape &>/dev/null
 
 # ------------------------------ aliases -----------------------------
 #      (use exec scripts instead, which work from vim and subprocs)
@@ -251,7 +203,6 @@ alias '?'=duck
 alias '??'=google
 alias '???'=bing
 alias x='exit'
-alias mkdirisosec='d=$(isosec);mkdir $d; cd $d'
 alias main='cd $(work main)'
 alias dot='cd ~/repos/github.com/$GITUSER/dotfiles'
 alias scripts='cd $SCRIPTS'
@@ -266,58 +217,62 @@ alias temp='cd $(mktemp -d)'
 alias view='vi -R'
 alias coin="clip '(yes|no)'"
 
-which vim &>/dev/null && alias vi=vim
+_have vim && alias vi=vim
 
 # ----------------------------- functions ----------------------------
 
-clear() { printf "\e[H\e[2J"; } && export -f clear
-c() { printf "\e[H\e[2J"; } && export -f c
-
 envx() {
-  local envfile="$1"
-  if test ! -e "$envfile" ; then
-    if test ! -e ~/.env ; then
-      echo "file not found: $envfile"
-      return
-    fi
-    envfile=~/.env
-  fi
+  local envfile="${1:-"$HOME/.env"}"
+  [[ ! -e "$envfile" ]] && echo "$envfile not found" && return 1
   while IFS= read -r line; do
     name=${line%%=*}
     value=${line#*=}
-    if [[ -z "${name}" || $name =~ ^# ]]; then
-      continue
-    fi
+    [[ -z "${name}" || $name =~ ^# ]] && continue
     export "$name"="$value"
-  done <"${envfile}"
+  done < "$envfile"
 } && export -f envx
 
-test -e ~/.env && envx ~/.env
+[[ -e "$HOME/.env" ]] && envx "$HOME/.env"
 
-newcmdbox() { 
-  name="$1"
-  test -z "$name" && echo "usage: newcmdbox <name>" && return 1
-  test -z "$GHREPOS" && echo "GHREPOS not set" && return 1
-  test ! -d "$GHREPOS" && echo "Not found: $GHREPOS" && return 1
-  test -e "cmdbox-$name" && echo "exists: cmdbox-$name" && return 1
-  cd "$GHREPOS"
-  gh repo create -p rwxrob/template-cmdbox "cmdbox-$name"
-  cd "cmdbox-$name"
-} && export -f newcmd
+new-from() { 
+  local template="$1"
+  local name="$2"
+  ! _have gh && echo "gh command not found" && return 1
+  [[ -z "$name" ]] && echo "usage: $0 <name>" && return 1
+  [[ -z "$GHREPOS" ]] && echo "GHREPOS not set" && return 1
+  [[ ! -d "$GHREPOS" ]] && echo "Not found: $GHREPOS" && return 1
+  cd "$GHREPOS" || return 1
+  [[ -e "$name" ]] && echo "exists: $name" && return 1
+  gh repo create -p "$template" "$name"
+  cd "$name" || return 1
+}
 
-newcmd() {
-  name="$1"
-  test -z "$name" && echo "usage: newcmd <name>" && return 1
-  test -z "$GHREPOS" && echo "GHREPOS not set" && return 1
-  test ! -d "$GHREPOS" && echo "Not found: $GHREPOS" && return 1
-  test -e "cmd-$name" && echo "exists: cmd-$name" && return 1
-  cd "$GHREPOS"
-  gh repo create -p rwxrob/template-bash-command "cmd-$name"
-  cd "cmd-$name"
-} && export -f newcmd
+new-cmdbox() { new-from rwxrob/template-cmdbox "cmdbox-$1"; }
+new-cmd() { new-from rwxrob/template-bash-command "cmd-$1"; }
+
+export -f new-from new-cmdbox new-cmd
+
+# ------------- source external dependencies / completion ------------
+
+owncomp=(
+  pdf md zet yt gl auth pomo config iam sshkey ws x clip log todo
+  ./build build b ./setup ./cmd
+)
+
+for i in "${owncomp[@]}"; do complete -C "$i" "$i"; done
+
+_have gh && . <(gh completion -s bash)
+_have pandoc && . <(pandoc --bash-completion)
+_have kubectl && . <(kubectl completion bash)
+_have kind && . <(kind completion bash)
+_have yq && . <(yq shell-completion bash)
+_have helm && . <(helm completion bash)
+_have k && complete -o default -F __start_kubectl k
+_have docker && _source_if "$HOME/.local/share/docker/completion" # d
 
 # -------------------- personalized configuration --------------------
 
-test -r ~/.bash_personal && source ~/.bash_personal
-test -r ~/.bash_private && source ~/.bash_private
-test -r ~/.bash_work && source ~/.bash_work
+_source_if "$HOME/.bash_personal"
+_source_if "$HOME/.bash_private"
+_source_if "$HOME/.bash_work"
+
