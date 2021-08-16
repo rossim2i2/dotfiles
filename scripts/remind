@@ -1,3 +1,0 @@
-#!/bin/sh
-buf=$(argsorin "$*")
-tell "*REMEMBER:* $buf"

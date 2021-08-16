@@ -1,0 +1,39 @@
+#!/bin/bash
+
+declare clear=$'\033[2J'
+declare top=$'\033[H'
+
+marquee() {
+  local epoch=$(date -u +%s)
+  local topic="$(topic)"
+  local time="$(date +"%A, %B %-e, %Y, %-l:%M%P %Z%0z")"
+  #local -i cols=$(tmux -L live list-panes -F '#{pane_width}'|head -1 )
+  #cols=${cols%% *}
+  local topicw=${#topic}
+  local timew=${#time}
+  local pomo=$(pomo)
+  local pomow=${#pomo}
+  local cols=85
+  local remain=$((cols - (timew + topicw + 1 + pomow)))
+  if (( remain > 0 )); then
+    echo "$time $pomo $topic"
+    return
+  fi
+  if (( epoch%20 < 10 ));then
+    echo "$topic $pomo"
+  else
+    echo "$time $pomo"
+  fi
+}
+
+marquee "$@"
+
+# if [[ -t 1 ]];then
+#   trap "setterm --cursor on; echo $clear; exit; trap -- - SIGINT SIGTERM" SIGTERM SIGINT
+#   setterm --cursor off
+#   while true; do
+#     echo -n "$clear$top"
+#     marquee "$@"
+#     sleep 1
+#   done
+# fi

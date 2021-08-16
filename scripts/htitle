@@ -2,10 +2,22 @@
 
 # Produces a centered title in the middle of a horizontal rule of text.
 
-str=$(argsorin $*)
-len=${#str}
-side=$(( ((HRULEWIDTH/2)-len/2)-3 ))
-left=$side
-right=$side
-[[ $[len%2] == 1 ]] && right=$[right-1]
-echo "# $(echon '-' $left) $str $(echon '-' $right)"
+_filter(){
+  [[ -n "$1" ]] && return 1
+  while IFS= read -ra args; do
+    "${FUNCNAME[1]}" "${args[@]}"
+  done
+}
+
+htitle() {
+  _filter "$@" && return $?
+  local str="$1"
+  local -i len=${#str}
+  local -i side=$((((HRULEWIDTH / 2) - len / 2) - 3))
+  local -i left=$side
+  local -i right=$side
+  (( len % 2 == 1 )) && ((right -= 1))
+  echo "# $(echon '-' $left) $str $(echon '-' $right)"
+}
+
+htitle "$@"

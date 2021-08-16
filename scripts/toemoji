@@ -5,7 +5,12 @@ emoji[smile]=🙂
 emoji[bear]=🐻
 emoji[hamburger]=🍔
 emoji[lightbulb]=💡
-emoji[pomo]=🍅 U+1F345
+emoji[idea]=💡
+emoji[comment]=💬
+emoji[chat]=💬
+emoji[pomo]=🍅
+emoji[warning]=⚠️
+emoji[rant]=🤬
 
 toemoji() {
   local in=/dev/stdin

@@ -1,0 +1,91 @@
+#!/bin/bash
+
+x_away() {
+    local message="$*"
+    [[ -z "$message" ]] && message="away since $(date +%FT%T%z)"
+    away="🐟 $message"
+    t "$away" 2>/dev/null
+    pomo stop
+    fishies
+}
+
+x_working() {
+    _filter "$@" && return $?
+    local message="$*"
+    [[ -z "$message" ]] && read -r message -p "Message: "
+    t "☕ $message" 2>/dev/null
+}
+
+x_chatting() {
+    _filter "$@" && return $?
+    local message="$*"
+    [[ -z "$message" ]] && read -r message -p "Message: "
+    t "💬 $message" 2>/dev/null
+}
+
+x_ranting() {
+    _filter "$@" && return $?
+    local message="$*"
+    [[ -z "$message" ]] && read -r message -p "Message: "
+    t "🤬 $message" 2>/dev/null
+}
+
+x_partying() {
+    _filter "$@" && return $?
+    local message="$*"
+    [[ -z "$message" ]] && read -r message -p "Message: "
+    t "🎉 $message" 2>/dev/null
+}
+
+x_gaming() {
+    _filter "$@" && return $?
+    local message="$*"
+    [[ -z "$message" ]] && read -r message -p "Message: "
+    t "🕹️ $message" 2>/dev/null
+}
+
+x_recording() {
+    _filter "$@" && return $?
+    local message="$*"
+    [[ -z "$message" ]] && read -r message -p "Message: "
+    t "🎬 $message" 2>/dev/null
+}
+
+# --------------------- completion and delegation --------------------
+
+_filter(){
+  (( $# > 0 )) && return 1
+  while IFS= read -ra args; do
+    "${FUNCNAME[1]}" "${args[@]}"
+  done
+}
+
+while IFS= read -r line; do
+    [[ $line =~ ^declare\ -f\ x_ ]] || continue
+    COMMANDS+=( "${line##declare -f x_}" )
+done < <(declare -F)
+
+if [[ -n $COMP_LINE ]]; then
+    line=${COMP_LINE#* }
+    for c in "${COMMANDS[@]}"; do
+        [[ ${c:0:${#line}} == "${line,,}" ]] && echo "$c"
+    done
+    exit
+fi
+
+EXE="${0##*/}"
+for c in "${COMMANDS[@]}"; do
+    if [[ $c == "$EXE" ]]; then
+        "x_$EXE" "$@"
+        exit $?
+    fi
+done
+
+CMD="$1"; shift
+for c in "${COMMANDS[@]}"; do
+    if [[ $c == "$CMD" ]]; then
+        "x_$CMD" "$@"
+        exit $?
+    fi
+done
+
