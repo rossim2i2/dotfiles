@@ -13,7 +13,7 @@ declare -A help # associative arrays *require* declaration
 : "${HELP_BROWSER:=}"
 : "${GITUSER:=$USER}"
 : "${GITBRANCH:=main}"
-: "${ZETDIR:=$GHREPOS/zet}"
+: "${ZETDIR:=$GHREPOS/$EXE}"
 : "${ZET_CAST_DIR:=$HOME/Videos/ZettelCasts}"
 : "${ZET_CAST_FOOTER:=}"
 : "${ZET_CAST_CATEGORY:=28}" # Science and Techology
@@ -297,7 +297,7 @@ command__cast_sync() {
   [[ -z "$zetid" ]] && echo '<failed to lookup zetid>' && return 1
   local title=$(command_title "$zetid")
   local body=$(command_body "$zetid" codeless)
-  local zeturl="https://github.com/$GITUSER/zet/tree/$GITBRANCH/$zetid"
+  local zeturl="https://github.com/$GITUSER/$EXE/tree/$GITBRANCH/$zetid"
   [[ -n "$ZETCASTFOOT" ]] && foot=$(command_body "$ZET_CAST_FOOTER")
   desc="$body$n$n$foot$n$n[ZETID:$zetid]$n$zeturl"
   yt publish "$ytid" "$title" "$desc" "$ZET_CAST_CATEGORY"
@@ -355,7 +355,7 @@ command_url() {
   _filter "$@" && return $?
   local zetid="$1"
   [[ -z "$zetid" || $zetid = last ]] && zetid=$(command_last)
-  echo "https://github.com/$GITUSER/zet/tree/$GITBRANCH/$zetid"
+  echo "https://github.com/$GITUSER/$EXE/tree/$GITBRANCH/$zetid"
 }
 
 command_open() { 
