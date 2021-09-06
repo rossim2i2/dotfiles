@@ -291,7 +291,7 @@ au bufnewfile,bufRead doc.go set spell
 
 "fix bork bash detection
 fun! s:DetectBash()
-    if getline(1) == '#!/usr/bin/bash'
+    if getline(1) == '#!/usr/bin/bash' || getline(1) == '#!/bin/bash'
         set ft=bash
         set shiftwidth=2
     endif
