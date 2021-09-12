@@ -48,7 +48,7 @@ export VISUAL=vim
 export EDITOR_PREFIX=vim
 
 export GOPRIVATE="github.com/$GITUSER/*,gitlab.com/$GITUSER/*"
-export GOPATH=~"$HOME/.local/share/go"
+export GOPATH="$HOME/.local/share/go"
 export GOBIN="$HOME/.local/bin"
 export GOPROXY=direct
 export CGO_ENABLED=0
