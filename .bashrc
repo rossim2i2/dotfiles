@@ -23,7 +23,7 @@ _source_if() { [[ -r "$1" ]] && source "$1"; }
 
 #export GITUSER="$USER"
 export GITUSER="rossim2i2"
-export REPOS="$HOME/repos"
+export REPOS="$HOME/Repos"
 export GHREPOS="$REPOS/github.com/$GITUSER"
 export KN="$GHREPOS"
 export DOTFILES="$GHREPOS/dotfiles"
@@ -259,8 +259,30 @@ new-from() {
 
 new-cmdbox() { new-from rwxrob/template-cmdbox "cmdbox-$1"; }
 new-cmd() { new-from rwxrob/template-bash-command "cmd-$1"; }
+cdz () { cd $(zet get "$@"); }
 
 export -f new-from new-cmdbox new-cmd
+
+clone() {
+  local repo="$1" user
+  local repo="${repo#https://github.com/}"
+  local repo="${repo#git@github.com:}"
+  if [[ $repo =~ / ]]; then
+    user="${repo%%/*}"
+  else
+    user="$GITUSER"
+    [[ -z "$user" ]] && user="$USER"
+  fi
+  local name="${repo##*/}"
+  local userd="$REPOS/github.com/$user"
+  local path="$userd/$name"
+  [[ -d "$path" ]] && cd "$path" && return
+  mkdir -p "$userd"
+  cd "$userd"
+  echo gh repo clone "$user/$name" -- --recurse-submodule
+  gh repo clone "$user/$name" -- --recurse-submodule
+  cd "$name"
+} && export -f clone
 
 # ------------- source external dependencies / completion ------------
 
