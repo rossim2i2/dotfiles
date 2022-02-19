@@ -8,6 +8,12 @@ case $- in
 *) return ;;
 esac
 
+# ------------------------- distro detection -------------------------
+
+export DISTRO
+[[ $(uname -r) =~ Microsoft ]] && DISTRO=WSL2 #TODO distinguish WSL1
+#TODO add the rest
+
 # ---------------------- local utility functions ---------------------
 
 _have()      { type "$1" &>/dev/null; }
@@ -23,23 +29,24 @@ export KN="$GHREPOS"
 export DOTFILES="$GHREPOS/dotfiles"
 export SCRIPTS="$DOTFILES/scripts"
 export SNIPPETS="$DOTFILES/snippets"
+export HELP_BROWSER=lynx
 export DESKTOP="$HOME/Desktop"
 export DOCUMENTS="$HOME/Documents"
 export DOWNLOADS="$HOME/Downloads"
 export TEMPLATES="$HOME/Templates"
 export PUBLIC="$HOME/Public"
 export PRIVATE="$HOME/Private"
+export Pictures="$HOME/Pictures"
 export MUSIC="$HOME/Music"
 export VIDEOS="$HOME/Videos"
 export PDFS="$DOCUMENTS/PDFS"
 export VIRTUALMACHINES="$HOME/VirtualMachines"
 export WORKSPACES="$HOME/Workspaces"
-# export ZETDIR="$GHREPOS/zet"
+export ZETDIR="$GHREPOS/zet"
 export ZETTELCASTS="$VIDEOS/ZettelCasts"
 export CLIP_DIR="$VIDEOS/Clips"
 export CLIP_DATA="$GHREPOS/cmd-clip/data"
 export CLIP_VOLUME=0
-export HELP_BROWSER=lynx
 
 export TERM=xterm-256color
 export HRULEWIDTH=73
@@ -62,6 +69,7 @@ export LESS_TERMCAP_se="" # "0m"
 export LESS_TERMCAP_so="[34m" # blue
 export LESS_TERMCAP_ue="" # "0m"
 export LESS_TERMCAP_us="[4m"  # underline
+export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 
 test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
 
@@ -85,14 +93,15 @@ fi
 # ------------------------------- path -------------------------------
 
 pathappend() {
-  for ARG in "$@"; do
+  declare arg
+  for arg in "$@"; do
     test -d "$arg" || continue
     PATH=${PATH//":$arg:"/:}
     PATH=${PATH/#"$arg:"/}
     PATH=${PATH/%":$arg"/}
     export PATH="${PATH:+"$PATH:"}$arg"
   done
-}
+} && export pathappend
 
 pathprepend() {
   for arg in "$@"; do
@@ -102,7 +111,7 @@ pathprepend() {
     PATH=${PATH/%":$arg"/}
     export PATH="$arg${PATH:+":${PATH}"}"
   done
-}
+} && export pathprepend
 
 # remember last arg will be first in path
 pathprepend \
@@ -113,6 +122,9 @@ pathprepend \
 
 pathappend \
   /usr/local/opt/coreutils/libexec/gnubin \
+  '/mnt/c/Program Files/Oracle/VirtualBox' \
+  '/mnt/c/Windows' \
+  '/mnt/c/Program Files (x86)/VMware/VMware Workstation' \
   /mingw64/bin \
   /usr/local/bin \
   /usr/local/sbin \
@@ -130,7 +142,7 @@ export CDPATH=".:$GHREPOS:$DOT:$REPOS:/media/$USER:$HOME"
 # ------------------------ bash shell options ------------------------
 
 shopt -s checkwinsize
-#shopt -s expand_aliases
+shopt -s expand_aliases
 shopt -s globstar
 shopt -s dotglob
 shopt -s extglob
@@ -195,8 +207,6 @@ _have setxkbmap && test -n "$DISPLAY" && \
 #      (use exec scripts instead, which work from vim and subprocs)
 
 unalias -a
-alias d=docker
-alias k=kubectl
 alias ls='ls -h --color=auto'
 alias lsa='exa -al --color=always --group-directories-first'
 alias '?'=duck
@@ -204,7 +214,7 @@ alias '??'=google
 alias '???'=bing
 alias x='exit'
 alias main='cd $(work main)'
-alias dot='cd ~/repos/github.com/$GITUSER/dotfiles'
+alias dot='cd $DOTFILES'
 alias scripts='cd $SCRIPTS'
 alias snippets='cd $SNIPPETS'
 alias free='free -h'
