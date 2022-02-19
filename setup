@@ -10,7 +10,7 @@ ln -sf "$PWD/scripts" "$HOME/Scripts"
 
 mkdir -p "$HOME/.local/bin" || true
 ln -sf "$PWD/bin/linux/x86_64/tmatrix" "$HOME/.local/bin/tmatrix"
-l
+
 for i in vim lynx gh git tmux docker; do
   cd $i && ./setup
   cd -
