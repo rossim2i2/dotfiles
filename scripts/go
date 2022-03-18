@@ -1,2 +1,0 @@
-#!/bin/sh
-exec "$GOBIN/go1.18beta2" "$@"
