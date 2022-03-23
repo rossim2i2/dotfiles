@@ -1,6 +1,9 @@
 " designed for vim 8+
-" (see https://rwx.gg/vi for help)
-let skip_defaults_vim=1
+
+if has("eval")                               " vim-tiny lacks 'eval'
+  let skip_defaults_vim = 1
+endif
+
 set nocompatible
 
 "####################### Vi Compatible (~/.exrc) #######################
@@ -24,31 +27,41 @@ set tabstop=2
 
 "#######################################################################
 
+" disable visual bell (also disable in .inputrc)
+set t_vb=
+
+let mapleader=","
+
 set softtabstop=2
+
+" mostly used with >> and <<
 set shiftwidth=2
+
 set smartindent
+
 set smarttab
 
 if v:version >= 800
-  " stop vim from silently fucking with files that it shouldn't
+  " stop vim from silently messing with files that it shouldn't
   set nofixendofline
 
   " better ascii friendly listchars
   set listchars=space:*,trail:*,nbsp:*,extends:>,precedes:<,tab:\|>
 
-  " i fucking hate automatic folding
+  " i hate automatic folding
   set foldmethod=manual
   set nofoldenable
 endif
 
 " mark trailing spaces as errors
-match ErrorMsg '\s\+$'
-
-" replace tabs with spaces automatically
-set expandtab
+match IncSearch '\s\+$'
 
 " enough for line numbers + gutter within 80 standard
 set textwidth=72
+"set colorcolumn=73
+
+" replace tabs with spaces automatically
+set expandtab
 
 " disable relative line numbers, remove no to sample it
 set norelativenumber
@@ -67,7 +80,7 @@ set nowritebackup
 set icon
 
 " center the cursor always on the screen
-set scrolloff=999
+"set scrolloff=999
 
 " highlight search hits
 set hlsearch
@@ -81,7 +94,9 @@ set shortmess=aoOtTI
 set viminfo='20,<1000,s1000
 
 " not a fan of bracket matching or folding
-let g:loaded_matchparen=1
+if has("eval") " vim-tiny detection
+  let g:loaded_matchparen=1
+endif
 set noshowmatch
 
 " wrap around when searching
@@ -123,7 +138,9 @@ set hidden
 set history=100
 
 " here because plugins and stuff need it
-syntax enable
+if has("syntax")
+  syntax enable
+endif
 
 " faster scrolling
 set ttyfast
@@ -166,6 +183,7 @@ au FileType * hi ModeMsg ctermfg=black cterm=NONE ctermbg=NONE
 au FileType * hi MoreMsg ctermfg=black ctermbg=NONE
 au FileType * hi NonText ctermfg=black ctermbg=NONE
 au FileType * hi vimGlobal ctermfg=black ctermbg=NONE
+au FileType * hi goComment ctermfg=black ctermbg=NONE
 au FileType * hi ErrorMsg ctermbg=234 ctermfg=darkred cterm=NONE
 au FileType * hi Error ctermbg=234 ctermfg=darkred cterm=NONE
 au FileType * hi SpellBad ctermbg=234 ctermfg=darkred cterm=NONE
@@ -178,6 +196,9 @@ au FileType * hi MatchParen ctermbg=236 ctermfg=darkred
 au FileType markdown,pandoc hi Title ctermfg=yellow ctermbg=NONE
 au FileType markdown,pandoc hi Operator ctermfg=yellow ctermbg=NONE
 au FileType bash set sw=2
+au FileType c set sw=8
+
+set cinoptions+=:0
 
 " Edit/Reload vimr configuration file
 nnoremap confe :e $HOME/.vimrc<CR>
@@ -188,14 +209,24 @@ set ruf=%30(%=%#LineNr#%.50F\ [%{strlen(&ft)?&ft:'none'}]\ %l:%c\ %p%%%)
 " only load plugins if Plug detected
 if filereadable(expand("~/.vim/autoload/plug.vim"))
 
-  call plug#begin('~/.vimplugins')
-  Plug 'sheerun/vim-polyglot'
+  " github.com/junegunn/vim-plug
+
+  call plug#begin('~/.local/share/vim/plugins')
+  Plug 'frazrepo/vim-rainbow'
   Plug 'vim-pandoc/vim-pandoc'
+  Plug 'pegn/pegn-syntax'
   Plug 'rwxrob/vim-pandoc-syntax-simple'
-  Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
+  Plug 'fatih/vim-go', { 'do': ':GoInstallBinaries' }
   Plug 'tpope/vim-fugitive'
+  Plug 'hashivim/vim-terraform'
   Plug 'morhetz/gruvbox'
   call plug#end()
+
+  " rainbox
+  let g:rainbow_active = 1
+
+  " terraform
+  let g:terraform_fmt_on_save = 1
 
   " pandoc
   let g:pandoc#formatting#mode = 'h' " A'
@@ -217,7 +248,7 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   let g:go_highlight_build_constraints = 1
   let g:go_highlight_diagnostic_errors = 1
   let g:go_highlight_diagnostic_warnings = 1
-  "let g:go_auto_type_info = 1
+  "let g:go_auto_type_info = 1 " forces 'Press ENTER' too much
   let g:go_auto_sameids = 0
   "let g:go_metalinter_command='golangci-lint'
   "let g:go_metalinter_command='golint'
@@ -230,8 +261,19 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   au FileType go nmap <leader>c :GoCoverageToggle<CR>
   au FileType go nmap <leader>i :GoInfo<CR>
   au FileType go nmap <leader>l :GoMetaLinter!<CR>
+  au FileType go nmap <leader>m ilog.Print("made")<CR><ESC>
 else
   autocmd vimleavepre *.go !gofmt -w % " backup if fatih fails
+endif
+
+" format perl on save
+if has("eval") " vim-tiny detection
+fun! s:Perltidy()
+  let l:pos = getcurpos()
+  silent execute '%!perltidy -i=2'
+  call setpos('.', l:pos)
+endfun
+"autocmd FileType perl autocmd BufWritePre <buffer> call s:Perltidy()
 endif
 
 "autocmd vimleavepre *.md !perl -p -i -e 's,(?<!\[)my `(\w+)` (package|module|repo|command|utility),[my `\1` \2](https://gitlab.com/rwxrob/\1),g' %
@@ -239,14 +281,13 @@ endif
 " fill in empty markdown links with duck.com search
 " [some thing]() -> [some thing](https://duck.com/lite?kae=t&q=some thing)
 " s,/foo,/bar,g
-autocmd vimleavepre *.md !perl -p -i -e 's,\[([^\]]+)\]\(\),[\1](https://duck.com/lite?kd=-1&kp=-1&q=\1),g' %
+"autocmd vimleavepre *.md !perl -p -i -e 's,\[([^\]]+)\]\(\),[\1](https://duck.com/lite?kd=-1&kp=-1&q=\1),g' %
+
+autocmd BufWritePost *.md silent !toemoji %
+autocmd BufWritePost *.md silent !toduck %
 
 " fill in anything beginning with @ with a link to twitch to it
-"autocmd vimleavepre *.md !perl -p -i -e 's, @(\w+), [\\@\1](https://twitch.tv/\1),g' %
-
-" if you are gonna visual, might as well...
-vmap < <gv
-vmap > >gv
+" autocmd vimleavepre *.md !perl -p -i -e 's, @(\w+), [\\@\1](https://twitch.tv/\1),g' %
 
 " make Y consitent with D and C (yank til end)
 map Y y$
@@ -260,15 +301,7 @@ nnoremap <C-L> :nohl<CR><C-L>
 " enable omni-completion
 set omnifunc=syntaxcomplete#Complete
 
-" format perl on save
-fun! s:Perltidy()
-  let l:pos = getcurpos()
-  silent execute '%!perltidy -i=2'
-  call setpos('.', l:pos)
-endfun
-"autocmd FileType perl autocmd BufWritePre <buffer> call s:Perltidy()
-
-" force some file names to be specific file type
+" force some files to be specific file type
 au bufnewfile,bufRead $SNIPPETS/md/* set ft=pandoc
 au bufnewfile,bufRead $SNIPPETS/sh/* set ft=sh
 au bufnewfile,bufRead $SNIPPETS/bash/* set ft=bash
@@ -279,6 +312,8 @@ au bufnewfile,bufRead $SNIPPETS/css/* set ft=css
 au bufnewfile,bufRead $SNIPPETS/js/* set ft=javascript
 au bufnewfile,bufRead $SNIPPETS/python/* set ft=python
 au bufnewfile,bufRead $SNIPPETS/perl/* set ft=perl
+au bufnewfile,bufRead user-data set ft=yaml
+au bufnewfile,bufRead meta-data set ft=yaml
 au bufnewfile,bufRead *.bash* set ft=bash
 au bufnewfile,bufRead *.{peg,pegn} set ft=config
 au bufnewfile,bufRead *.profile set filetype=sh
@@ -290,6 +325,7 @@ au bufnewfile,bufRead /tmp/psql.edit.* set syntax=sql
 au bufnewfile,bufRead *.go set spell
 
 "fix bork bash detection
+if has("eval")  " vim-tiny detection
 fun! s:DetectBash()
     if getline(1) == '#!/usr/bin/bash' || getline(1) == '#!/bin/bash'
         set ft=bash
@@ -297,15 +333,18 @@ fun! s:DetectBash()
     endif
 endfun
 autocmd BufNewFile,BufRead * call s:DetectBash()
+endif
 
 " displays all the syntax rules for current position, useful
 " when writing vimscript syntax plugins
+if has("syntax")
 function! <SID>SynStack()
   if !exists("*synstack")
     return
   endif
     echo map(synstack(line('.'), col('.')), 'synIDattr(v:val, "name")')
 endfunc
+endif
 
 " start at last place you were editing
 au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
@@ -323,26 +362,25 @@ map <F12> :set fdm=indent<CR>
 nmap <leader>2 :set paste<CR>i
 
 " disable arrow keys (vi muscle memory)
-noremap <up> :echoerr "Umm, use k instead"<CR>
-noremap <down> :echoerr "Umm, use j instead"<CR>
-noremap <left> :echoerr "Umm, use h instead"<CR>
-noremap <right> :echoerr "Umm, use l instead"<CR>
-inoremap <up> <NOP>
-inoremap <down> <NOP>
-inoremap <left> <NOP>
-inoremap <right> <NOP>
-
-" Map alternatives the <ESC> key (<C-[> already is)
-inoremap jj <Esc>
-cnoremap jj <Esc>
-inoremap kk <Esc>
-cnoremap kk <Esc>
-inoremap kj <Esc>
-cnoremap kj <Esc>
+"noremap <up> :echoerr "Umm, use k instead"<CR>
+"noremap <down> :echoerr "Umm, use j instead"<CR>
+"noremap <left> :echoerr "Umm, use h instead"<CR>
+" noremap <right> :echoerr "Umm, use l instead"<CR>
+" inoremap <up> <NOP>
+" inoremap <down> <NOP>
+" inoremap <left> <NOP>
+" inoremap <right> <NOP>
+"
+" better use of arrow keys, number increment/decrement
+nnoremap <up> <C-a>
+nnoremap <down> <C-x>
 
 " Better page down and page up
 noremap <C-n> <C-d>
 noremap <C-p> <C-b>
+
+" Set TMUX window name to name of file
+"au fileopened * !tmux rename-window TESTING
 
 " read personal/private vim configuration (keep last to override)
 set rtp^=~/.vimpersonal
