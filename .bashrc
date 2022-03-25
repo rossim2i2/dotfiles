@@ -254,7 +254,7 @@ envx() {
 
 [[ -e "$HOME/.env" ]] && envx "$HOME/.env"
 
-new-from() { 
+new-from() {
   local template="$1"
   local name="$2"
   ! _have gh && echo "gh command not found" && return 1
@@ -264,10 +264,11 @@ new-from() {
   cd "$GHREPOS" || return 1
   [[ -e "$name" ]] && echo "exists: $name" && return 1
   gh repo create -p "$template" --private "$name"
+  gh repo clone "$name"
   cd "$name" || return 1
 }
 
-new-bonzai() { new-from rwxrob/bonzai-template "bonzai-$1"; }
+new-bonzai() { new-from rwxrob/foo "$1"; }
 new-cmd() { new-from rwxrob/template-bash-command "cmd-$1"; }
 cdz () { cd $(zet get "$@"); }
 
@@ -298,7 +299,8 @@ clone() {
 
 owncomp=(
   pdf md zet yt gl auth pomo config live iam sshkey ws x clip 
-  ./build build b ./k8sapp k8sapp ./setup ./cmd run ./run foo ./foo
+  ./build build b ./k8sapp k8sapp ./setup ./cmd run ./run 
+  foo ./foo cmds ./cmds z bonzai
 )
 
 for i in "${owncomp[@]}"; do complete -C "$i" "$i"; done
