@@ -1,11 +1,9 @@
-#!/usr/bin/bash
+#!bash
 # shellcheck disable=SC1090
-
-test -e /etc/bashrc && source /etc/bashrc
 
 case $- in
 *i*) ;; # interactive
-*) return ;;
+*) return ;; 
 esac
 
 # ------------------------- distro detection -------------------------
@@ -20,12 +18,12 @@ _have()      { type "$1" &>/dev/null; }
 _source_if() { [[ -r "$1" ]] && source "$1"; }
 
 # ----------------------- environment variables ----------------------
+#                           (also see envx)
 
-#export GITUSER="$USER"
-export GITUSER="rossim2i2"
+export USER="${USER:-$(whoami)}"
+export GITUSER="$USER"
 export REPOS="$HOME/Repos"
 export GHREPOS="$REPOS/github.com/$GITUSER"
-export KN="$GHREPOS"
 export DOTFILES="$GHREPOS/dotfiles"
 export SCRIPTS="$DOTFILES/scripts"
 export SNIPPETS="$DOTFILES/snippets"
@@ -36,42 +34,46 @@ export DOWNLOADS="$HOME/Downloads"
 export TEMPLATES="$HOME/Templates"
 export PUBLIC="$HOME/Public"
 export PRIVATE="$HOME/Private"
-export Pictures="$HOME/Pictures"
+export PICTURES="$HOME/Pictures"
 export MUSIC="$HOME/Music"
 export VIDEOS="$HOME/Videos"
-export PDFS="$DOCUMENTS/PDFS"
+export PDFS="$HOME/usb/pdfs"
 export VIRTUALMACHINES="$HOME/VirtualMachines"
-export WORKSPACES="$HOME/Workspaces"
+export WORKSPACES="$HOME/Workspaces" # container home dirs for mounting
 export ZETDIR="$GHREPOS/zet"
 export ZETTELCASTS="$VIDEOS/ZettelCasts"
 export CLIP_DIR="$VIDEOS/Clips"
 export CLIP_DATA="$GHREPOS/cmd-clip/data"
 export CLIP_VOLUME=0
-
+export CLIP_SCREEN=0
 export TERM=xterm-256color
 export HRULEWIDTH=73
-export EDITOR=vim
-export VISUAL=vim
-export EDITOR_PREFIX=vim
-
+export EDITOR=vi
+export VISUAL=vi
+export EDITOR_PREFIX=vi
 export GOPRIVATE="github.com/$GITUSER/*,gitlab.com/$GITUSER/*"
 export GOPATH="$HOME/.local/share/go"
 export GOBIN="$HOME/.local/bin"
 export GOPROXY=direct
 export CGO_ENABLED=0
-
-export PYTHONDONTWRITEBYTECODE=1 # fucking shit-for-brains var name
+export PYTHONDONTWRITEBYTECODE=2 # fucking shit-for-brains var name
 export LC_COLLATE=C
+export CFLAGS="-Wall -Wextra -Werror -O0 -g -fsanitize=address -fno-omit-frame-pointer -finstrument-functions"
 export LESS_TERMCAP_mb="[35m" # magenta
 export LESS_TERMCAP_md="[33m" # yellow
-export LESS_TERMCAP_me="" # "0m"
-export LESS_TERMCAP_se="" # "0m"
+export LESS_TERMCAP_me="" # "0m"
+export LESS_TERMCAP_se="" # "0m"
 export LESS_TERMCAP_so="[34m" # blue
-export LESS_TERMCAP_ue="" # "0m"
+export LESS_TERMCAP_ue="" # "0m"
 export LESS_TERMCAP_us="[4m"  # underline
+export ANSIBLE_INVENTORY="$HOME/.config/ansible/ansible_hosts"
 export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
 
-test -d ~/.vim/spell && export VIMSPELL=(~/.vim/spell/*.add)
+[[ -d /.vim/spell ]] && export VIMSPELL=("$HOME/.vim/spell/*.add")
+
+# -------------------------------- gpg -------------------------------
+
+#export GPG_TTY=$(tty)
 
 # ------------------------------- pager ------------------------------
 
@@ -115,10 +117,10 @@ pathprepend() {
 
 # remember last arg will be first in path
 pathprepend \
-  /usr/local/go/bin \
+  /usr/local/bin \
   "$HOME/.local/bin" \
   "$GHREPOS/cmd-"* \
-  "$SCRIPTS"
+  "$SCRIPTS" 
 
 pathappend \
   /usr/local/opt/coreutils/libexec/gnubin \
@@ -128,6 +130,7 @@ pathappend \
   /mingw64/bin \
   /usr/local/bin \
   /usr/local/sbin \
+  /usr/local/games \
   /usr/games \
   /usr/sbin \
   /usr/bin \
@@ -137,7 +140,7 @@ pathappend \
 
 # ------------------------------ cdpath ------------------------------
 
-export CDPATH=".:$GHREPOS:$DOT:$REPOS:/media/$USER:$HOME"
+export CDPATH=".:$GHREPOS:$DOTFILES:$REPOS:/media/$USER:$HOME"
 
 # ------------------------ bash shell options ------------------------
 
@@ -146,8 +149,13 @@ shopt -s expand_aliases
 shopt -s globstar
 shopt -s dotglob
 shopt -s extglob
+
 #shopt -s nullglob # bug kills completion for some
 #set -o noclobber
+
+# -------------------------- stty annoyances -------------------------
+
+stty stop undef # disable control-s accidental terminal stops
 
 # ------------------------------ history -----------------------------
 
@@ -161,15 +169,14 @@ shopt -s histappend
 # --------------------------- smart prompt ---------------------------
 #                 (keeping in bashrc for portability)
 
-PROMPT_LONG=50
+PROMPT_LONG=20
 PROMPT_MAX=95
 PROMPT_AT=@
 
 __ps1() {
-  
   local P='$' dir="${PWD##*/}" B countme short long double\
     r='\[\e[31m\]' g='\[\e[30m\]' h='\[\e[34m\]' \
-    u='\[\e[33m\]' p='\[\e[33m\]' w='\[\e[35m\]' \
+    u='\[\e[33m\]' p='\[\e[34m\]' w='\[\e[35m\]' \
     b='\[\e[36m\]' x='\[\e[0m\]'
 
   [[ $EUID == 0 ]] && P='#' && u=$r && p=$u # root
@@ -207,25 +214,28 @@ _have setxkbmap && test -n "$DISPLAY" && \
 #      (use exec scripts instead, which work from vim and subprocs)
 
 unalias -a
-alias ls='ls -h --color=auto'
-alias lsa='exa -al --color=always --group-directories-first'
 alias '?'=duck
 alias '??'=google
 alias '???'=bing
-alias x='exit'
-alias main='cd $(work main)'
 alias dot='cd $DOTFILES'
 alias scripts='cd $SCRIPTS'
 alias snippets='cd $SNIPPETS'
+alias ls='ls -h --color=auto'
+alias lsa='exa -al --color=always --group-directories-first'
 alias free='free -h'
 alias df='df -h'
 alias chmox='chmod +x'
-alias pacup='sudo pacman -Syu'                    # update standard packages
-alias parup='paru -Syu'                           # update aur pakcages
-alias paclean='sudo pacman -Rns $(pacman -Qtqd)'  # remove orphaned packages
+alias sshh='sshpass -f $HOME/.sshpass ssh '
 alias temp='cd $(mktemp -d)'
-alias view='vi -R'
+alias view='vi -R' # which is usually linked to vim
+alias clear='printf "\e[H\e[2J"'
+alias c='printf "\e[H\e[2J"'
 alias coin="clip '(yes|no)'"
+alias grep="pcregrep"
+alias top=bashtop
+alias iam=live
+alias neo="neo -D -c gold"
+alias x="exit"
 
 _have vim && alias vi=vim
 
@@ -253,15 +263,15 @@ new-from() {
   [[ ! -d "$GHREPOS" ]] && echo "Not found: $GHREPOS" && return 1
   cd "$GHREPOS" || return 1
   [[ -e "$name" ]] && echo "exists: $name" && return 1
-  gh repo create -p "$template" "$name"
+  gh repo create -p "$template" --private "$name"
   cd "$name" || return 1
 }
 
-new-cmdbox() { new-from rwxrob/template-cmdbox "cmdbox-$1"; }
+new-bonzai() { new-from rwxrob/bonzai-template "bonzai-$1"; }
 new-cmd() { new-from rwxrob/template-bash-command "cmd-$1"; }
 cdz () { cd $(zet get "$@"); }
 
-export -f new-from new-cmdbox new-cmd
+export -f new-from new-bonzai new-cmd
 
 clone() {
   local repo="$1" user
@@ -287,24 +297,33 @@ clone() {
 # ------------- source external dependencies / completion ------------
 
 owncomp=(
-  pdf md zet yt gl auth pomo config iam sshkey ws x clip log todo
-  ./build build b ./setup ./cmd
+  pdf md zet yt gl auth pomo config live iam sshkey ws x clip 
+  ./build build b ./k8sapp k8sapp ./setup ./cmd run ./run foo ./foo
 )
 
 for i in "${owncomp[@]}"; do complete -C "$i" "$i"; done
 
 _have gh && . <(gh completion -s bash)
 _have pandoc && . <(pandoc --bash-completion)
-_have kubectl && . <(kubectl completion bash)
+_have kubectl && . <(kubectl completion bash 2>/dev/null)
+_have spotify && . <(spotify completion bash 2>/dev/null)
+#_have clusterctl && . <(clusterctl completion bash)
+_have k && complete -o default -F __start_kubectl k
 _have kind && . <(kind completion bash)
+_have kompose && . <(kompose completion bash)
 _have yq && . <(yq shell-completion bash)
 _have helm && . <(helm completion bash)
-_have k && complete -o default -F __start_kubectl k
+_have minikube && . <(minikube completion bash)
+_have conftest && . <(conftest completion bash)
+_have mk && complete -o default -F __start_minikube mk
+_have podman && _source_if "$HOME/.local/share/podman/completion" # d
 _have docker && _source_if "$HOME/.local/share/docker/completion" # d
+_have docker-compose && complete -F _docker_compose dc # dc
 
 # -------------------- personalized configuration --------------------
-
 _source_if "$HOME/.bash_personal"
 _source_if "$HOME/.bash_private"
 _source_if "$HOME/.bash_work"
 
+complete -C /usr/bin/terraform terraform
+complete -C /usr/bin/terraform tf
