@@ -24,6 +24,7 @@ export USER="${USER:-$(whoami)}"
 export GITUSER="$USER"
 export REPOS="$HOME/Repos"
 export GHREPOS="$REPOS/github.com/$GITUSER"
+export RWXREPOS="$REPOS/github.com/rwxrob"
 export DOTFILES="$GHREPOS/dotfiles"
 export SCRIPTS="$DOTFILES/scripts"
 export SNIPPETS="$DOTFILES/snippets"
@@ -129,6 +130,7 @@ pathappend \
   '/mnt/c/Program Files (x86)/VMware/VMware Workstation' \
   /mingw64/bin \
   /usr/local/bin \
+  /usr/local/go/bin \
   /usr/local/sbin \
   /usr/local/games \
   /usr/games \
@@ -140,7 +142,7 @@ pathappend \
 
 # ------------------------------ cdpath ------------------------------
 
-export CDPATH=".:$GHREPOS:$DOTFILES:$REPOS:/media/$USER:$HOME"
+export CDPATH=".:$GHREPOS:$RWXREPOS:$DOTFILES:$REPOS:/media/$USER:$HOME"
 
 # ------------------------ bash shell options ------------------------
 
