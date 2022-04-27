@@ -1,1 +1,0 @@
-/home/mike/repos/github.com/rossim2i2/dotfiles/shell.d

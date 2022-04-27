@@ -212,7 +212,6 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   " github.com/junegunn/vim-plug
 
   call plug#begin('~/.local/share/vim/plugins')
-  Plug 'frazrepo/vim-rainbow'
   Plug 'vim-pandoc/vim-pandoc'
   Plug 'pegn/pegn-syntax'
   Plug 'rwxrob/vim-pandoc-syntax-simple'
