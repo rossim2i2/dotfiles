@@ -1,6 +1,6 @@
 #!/bin/sh
 
-WEECHAT_FIFO="/run/user/1000/weechat/weechat_fifo_3410652"
+WEECHAT_FIFO="$HOME/.weechat/weechat_fifo"
 buf="$*"
 
 if [ -n "$buf" ]; then
