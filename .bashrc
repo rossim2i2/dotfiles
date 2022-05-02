@@ -238,6 +238,7 @@ alias top=bashtop
 alias iam=live
 alias neo="neo -D -c gold"
 alias x="exit"
+alias rwx='cd $RWXREPOS'
 
 _have vim && alias vi=vim
 
