@@ -227,6 +227,7 @@ alias lsa='exa -al --color=always --group-directories-first'
 alias free='free -h'
 alias df='df -h'
 alias chmox='chmod +x'
+alias diff='diff --color'
 alias sshh='sshpass -f $HOME/.sshpass ssh '
 alias temp='cd $(mktemp -d)'
 alias view='vi -R' # which is usually linked to vim
@@ -271,7 +272,7 @@ new-from() {
   cd "$name" || return 1
 }
 
-new-bonzai() { new-from rwxrob/foo "$1"; }
+new-bonzai() { new-from rwxrob/bonzai-example "$1"; }
 new-cmd() { new-from rwxrob/template-bash-command "cmd-$1"; }
 cdz () { cd $(zet get "$@"); }
 
@@ -316,7 +317,7 @@ _have spotify && . <(spotify completion bash 2>/dev/null)
 _have k && complete -o default -F __start_kubectl k
 _have kind && . <(kind completion bash)
 _have kompose && . <(kompose completion bash)
-_have yq && . <(yq shell-completion bash)
+#_have yq && . <(yq shell-completion bash)
 _have helm && . <(helm completion bash)
 _have minikube && . <(minikube completion bash)
 _have conftest && . <(conftest completion bash)
