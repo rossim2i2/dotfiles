@@ -72,6 +72,9 @@ set norelativenumber
 " turn on default spell checking
 "set spell
 
+" disable spellcapcheck
+set spc=
+
 " more risky, but cleaner
 set nobackup
 set noswapfile
@@ -195,6 +198,8 @@ au FileType * hi IncSearch ctermbg=236 cterm=NONE ctermfg=darkred
 au FileType * hi MatchParen ctermbg=236 ctermfg=darkred
 au FileType markdown,pandoc hi Title ctermfg=yellow ctermbg=NONE
 au FileType markdown,pandoc hi Operator ctermfg=yellow ctermbg=NONE
+au FileType yaml hi yamlBlockMappingKey ctermfg=NONE
+au FileType yaml set sw=4
 au FileType bash set sw=2
 au FileType c set sw=8
 
@@ -212,6 +217,7 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   " github.com/junegunn/vim-plug
 
   call plug#begin('~/.local/share/vim/plugins')
+  Plug 'frazrepo/vim-rainbow'
   Plug 'vim-pandoc/vim-pandoc'
   Plug 'pegn/pegn-syntax'
   Plug 'rwxrob/vim-pandoc-syntax-simple'
@@ -221,8 +227,9 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   Plug 'morhetz/gruvbox'
   call plug#end()
 
-  " rainbox
-  let g:rainbow_active = 1
+  " rainbow
+  " FIXME: only do this for non-pandoc file types
+  " let f:rainbow_active=1
 
   " terraform
   let g:terraform_fmt_on_save = 1
@@ -261,6 +268,7 @@ if filereadable(expand("~/.vim/autoload/plug.vim"))
   au FileType go nmap <leader>i :GoInfo<CR>
   au FileType go nmap <leader>l :GoMetaLinter!<CR>
   au FileType go nmap <leader>m ilog.Print("made")<CR><ESC>
+  au FileType go nmap <leader>n iif err != nil {return err}<CR><ESC>
 else
   autocmd vimleavepre *.go !gofmt -w % " backup if fatih fails
 endif
@@ -322,6 +330,7 @@ au bufnewfile,bufRead .dockerignore set filetype=gitignore
 au bufnewfile,bufRead *gitconfig set filetype=gitconfig
 au bufnewfile,bufRead /tmp/psql.edit.* set syntax=sql
 au bufnewfile,bufRead *.go set spell
+au bufnewfile,bufRead commands.yaml set spell
 
 "fix bork bash detection
 if has("eval")  " vim-tiny detection
