@@ -32,8 +32,7 @@ install_18() {
   cd "$(mktemp -d)"
 
   os=linux
-  #arch=amd64
-  arch=arm64
+  arch=amd64
 
   file=$(curl -sSL  "https://golang.org/dl/?mode=json" \
     | jq -r '.[0].files[]
