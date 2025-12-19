@@ -1,0 +1,14 @@
+#!/bin/sh
+
+WEECHAT_FIFO="$HOME/.weechat/weechat_fifo"
+buf="$*"
+
+if [ -n "$buf" ]; then
+  echo "*$buf"  > $WEECHAT_FIFO
+  exit 0
+fi
+
+while IFS= read -r line; do
+  echo "*$line" > $WEECHAT_FIFO
+done
+

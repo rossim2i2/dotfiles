@@ -1,0 +1,6 @@
+#!/bin/bash
+
+sudo pacman -S alacritty exa numlockx qtile tree github-cli
+
+source "$PATH/install-dmenu"
+

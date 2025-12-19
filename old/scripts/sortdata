@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "$1" | sed -e $'s/,/\\\n/g' | sort -n | tr '\n' ',' | sed 's/.$//'

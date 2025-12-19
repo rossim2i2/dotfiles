@@ -1,0 +1,190 @@
+# I only use Alacritty on Windows. That might explain a lot.
+#
+# ~/.config/alacritty/alacritty.yml
+# /mnt/c/Users/<me>/Application Data/alacritty/alacritty.yml
+# mkdir -p ~/.config/alacritty && \
+#   ln -sf "/mnt/..." /home/<me>/.config/alacritty/alacritty.yml
+
+env:
+  TERM: xterm-256color
+
+shell:
+  program: bash
+  # you'll need to add `cd` to your .bashrc on windows
+
+window:
+  dynamic_padding: false
+  # decorations: none
+  # startup_mode: Fullscreen
+  padding:
+    x: 6
+    y: 6
+
+tabspaces: 2
+
+font:
+
+  normal:
+    family: "Ubuntu Mono Nerd Font"
+  bold:
+    family: "Ubuntu Mono Nerd Font"
+  italic:
+    family: "Ubuntu Mono Nerd Font"
+  bold_italic:
+    family: "Ubuntu Mono Nerd Font"
+
+  size: 12
+  offset:
+    x: 0
+    y: 0
+  glyph_offset:
+    x: 0
+    y: 0
+
+draw_bold_text_with_bright_colors: false
+
+schemes:
+  gruvbox: &gruvbox
+    primary:
+      background: '0x1d2021'
+    normal:
+      black:   '0x504945'
+      red:     '0xcc241d'
+      green:   '0x98971a'
+      yellow:  '0xd79921'
+      blue:    '0x458588'
+      magenta: '0xb16286'
+      cyan:    '0x689d6a'
+      white:   '0xfbf1c7'
+    bright:
+      black:   '0x928374'
+      red:     '0xfb4934'
+      green:   '0xb8bb26'
+      yellow:  '0xfabd2f'
+      blue:    '0x83a598'
+      magenta: '0xd3869b'
+      cyan:    '0x8ec07c'
+      white:   '0xfe25bc'
+  xterm: &xterm
+    normal:
+      black:   '#000000'
+      red:     '#cd0000'
+      green:   '#00cd00'
+      yellow:  '#cdcd00'
+      blue:    '#0000ee'
+      magenta: '#cd00cd'
+      cyan:    '#00cdcd'
+      white:   '#e5e5e5'
+    bright:
+      black:   '#7f7f7f'
+      red:     '#ff0000'
+      green:   '#00ff00'
+      yellow:  '#ffff00'
+      blue:    '#5c5cff'
+      magenta: '#ff00ff'
+      cyan:    '#00ffff'
+      white:   '#ffffff'
+  afterglow: &afterglow
+    primary:
+      background: '0x2c2c2c'
+      foreground: '0xd6d6d6'
+      dim_foreground:    '0xdbdbdb'
+      bright_foreground: '0xd9d9d9'
+    normal:
+      black:   '0x1c1c1c'
+      red:     '0xbc5653'
+      green:   '0x909d63'
+      yellow:  '0xebc17a'
+      blue:    '0x7eaac7'
+      magenta: '0xaa6292'
+      cyan:    '0x86d3ce'
+      white:   '0xcacaca'
+    bright:
+      black:   '0x636363'
+      red:     '0xbc5653'
+      green:   '0x909d63'
+      yellow:  '0xebc17a'
+      blue:    '0x7eaac7'
+      magenta: '0xaa6292'
+      cyan:    '0x86d3ce'
+      white:   '0xf7f7f7'
+    dim:
+      black:   '0x232323'
+      red:     '0x74423f'
+      green:   '0x5e6547'
+      yellow:  '0x8b7653'
+      blue:    '0x556b79'
+      magenta: '0x6e4962'
+      cyan:    '0x5c8482'
+      white:   '0x828282'
+  dt: &dt
+    selection:
+      text: '0xbbc2cf'
+    normal:
+      black:   '0x000000'
+      red:     '0xff6c6b'
+      green:   '0x98be65'
+      yellow:  '0xda8548'
+      blue:    '0x51afef'
+      magenta: '0xc678dd'
+      cyan:    '0x5699af'
+      white:   '0xcacaca'
+    bright:
+      black:   '0x7f7f7f'
+      red:     '0xda8548'
+      green:   '0x4db5bd'
+      yellow:  '0xecbe7b'
+      blue:    '0x3071db'   # This is 2257a0 in Doom Emacs but I lightened it.
+      magenta: '0xa9a1e1'
+      cyan:    '0x46d9ff'
+      white:   '0xdfdfdf'
+
+colors: *gruvbox
+#colors: *xterm
+#colors: *afterglow
+#colors: *dt
+
+indexed_colors: []
+
+bell:
+  animation: EaseOutExpo
+  color: '0xffffff'
+  duration: 0
+
+background_opacity: 1
+
+mouse:
+  double_click: { threshold: 300 }
+  triple_click: { threshold: 300 }
+  hide_when_typing: true
+
+selection:
+  semantic_escape_chars: ",│`|:\"' ()[]{}<>"
+  save_to_clipboard: true
+
+mouse_bindings:
+  - { mouse: Middle, action: PasteSelection }
+
+cursor:
+  style: Block
+  unfocused_hollow: true
+
+live_config_reload: true
+
+scrolling:
+
+  history: 5000
+
+key_bindings:
+  - { key: PageUp,    mods: None,          action: ScrollPageUp,   mode: ~Alt  }
+  - { key: PageDown,  mods: None,          action: ScrollPageDown, mode: ~Alt  }
+  - { key: Home,      mods: Shift,         action: ScrollToTop,    mode: ~Alt  }
+  - { key: End,       mods: Shift,         action: ScrollToBottom, mode: ~Alt  }
+
+debug:
+  render_timer: false
+  persistent_logging: false
+  log_level: off
+  print_events: false
+  ref_test: false
+

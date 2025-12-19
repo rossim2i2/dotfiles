@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# Script will list out a tree of the current Knowledg Node note folder.
+# Useful when trying to remember where a note was previously stored (or
+# if a not was previously created). 
+#
+# I attempted to make this interactive and give the option to install
+# tree, if the application is not present on the distribution. While
+# probably not the best approach to do this, I attempted to
+# differentiate between Arch (pacman) and other (apt) isntallation
+# packages.
+
+if type tree >/dev/null 2>&1; then
+  tree "${KN}/notes" -d
+else
+  read -p 'Tree is not installed. Would you like to install it? (Y/n) ' ans
+
+  if [[ ! $ans =~ ^[Yy] ]]; then
+    exit
+  fi
+
+  if cat /etc/os-release | grep 'arch' > /dev/null 2>&1; then
+    sudo pacman -S tree
+  else
+    sudo apt install tree
+  fi
+
+fi

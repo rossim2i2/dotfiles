@@ -1,0 +1,300 @@
+#!/usr/bin/bash
+set -e
+
+## Environment Dependencies:
+##   YOUTUBE_RECORDINGS
+##   YOUTUBE_CHANID
+##   COMP_LINE
+## 
+## Script Dependencies
+##   auth
+##   newest
+
+YOUTUBE_APIKEY=$(auth get id youtubeapikey)
+YOUTUBE_TOKEN=$(auth token youtube)
+
+# ------------------------- utility functions ------------------------
+
+_newest() {
+  IFS=$'\n'
+  local -a f=($(ls -1 --color=never -trd ${1:-.}/* 2>/dev/null))
+  [[ ${#f} > 0 ]] && echo "${f[-1]}"
+}
+
+# ----------------------------- commands -----------------------------
+
+x_pending() {
+  case "$1" in 
+    prep)
+      for i in $(x_pending); do
+        mv $i "$YOUTUBE_RECORDINGS/$(zet for "$i").mkv" || true
+      done
+      ;;
+    *) find "$YOUTUBE_RECORDINGS" -type f ;;
+  esac
+}
+
+x_live () {
+  echo "https://youtu.be/$(x_liveid)"
+}
+
+x_liveid () {
+ curl -s \
+   "https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id&broadcastStatus=active&key=${YOUTUBE_APIKEY}" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed |
+  jq -r '.items[0].id'
+}
+
+# Uploaded shows the most recently uploaded videos (from the
+# contentDetails.related.Playlists.uploads playlist). By default will
+# only show enough to fill the current terminal screen (tput lines - 2).
+# Keep in mind, this only works if title length has been kept to 72 or
+# fewer columns. Provide an argument with the total number if more lines
+# are are wanted.
+
+x_uploaded() {
+  local lines=$(( $(tput lines) - 2 ))
+  [[ -n "$1" ]] && lines="$1"
+  local pl=$(curl -s \
+   "https://www.googleapis.com/youtube/v3/channels?part=contentDetails&key=${YOUTUBE_APIKEY}&mine=true" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed |
+  jq -r '.items[0].contentDetails.relatedPlaylists.uploads')
+  curl -s \
+   "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=${YOUTUBE_APIKEY}&playlistId=$pl&maxResults=$lines" \
+   -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed  |
+  jq -r '.items[].snippet | .resourceId.videoId + " " + .title'
+  #jq -r '.items[].snippet | .publishedAt + " " + .resourceId.videoId + " " + .title'
+}
+x_u() { x_uploaded "$@"; }
+
+x_video() {
+  local ytid="${1##*/}"
+  curl -s \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet,fileDetails,contentDetails,statistics,status,id,liveStreamingDetails,player,processingDetails,recordingDetails,suggestions,topicDetails,localizations&key=${YOUTUBE_APIKEY}&id=$ytid" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed | jq -r '.items[0]'
+}
+x_v() { x_video "$@"; }
+
+x_open () {
+  local what="$1"
+  case $what in 
+    # TODO drop dependency on external open, create _openit
+    last) open "$(x_last)" ;;
+    live) open "$(x_live)" ;;
+    *) open "https://youtu.be/$what";;
+  esac
+}
+x_o() { x_open "$@"; }
+
+x_last() {
+  local what="$1"
+  case $what in 
+    rec*) x_newest "${YOUTUBE_RECORDINGS}";;
+    uploaded|*)
+      local l=$(x_uploaded | head -1)
+      echo "https://youtu.be/${l%% *}" ;;
+  esac
+}
+
+x_usage() {
+    local cmds="${COMMANDS[@]}"
+    printf "usage: ${0##*/} (${cmds// /|})\n"
+}
+
+x_set_title() {
+  local id="$1"
+  [[ $id == live ]] && id=$(x_liveid)
+  shift;
+  curl -s --compressed -X PUT \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet&key=${YOUTUBE_APIKEY}" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  --data-raw '{"id": "'"$id"'", "snippet": {"title": "'"$*"'", "categoryId":"28"} }' | jq -r '.snippet.title'
+}
+
+x_title() {
+  local ytid="${1##*/}"
+  [[ $ytid == live ]] && ytid=$(x_liveid)
+  if [[ $# > 1 ]]; then
+    x_set_title "$@"
+    return $?
+  fi
+  if [[ -z "$ytid" ]]; then
+    local IFS=$'\n'
+    while read -r line; do
+      x_title $line
+    done
+    return 0
+  fi
+  curl -s \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet&key=${YOUTUBE_APIKEY}&id=$ytid" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed | 
+  jq -r '.items[0].snippet.title'
+}
+x_t() { x_title "$@"; }
+
+x_set_desc() {
+  local id="$1"
+  [[ $id == live ]] && id=$(x_liveid)
+  shift;
+  local title=$(x_title "$id")
+  local desc="$*"
+  local eol=$'\n'
+  desc=${desc//$eol/\\n}
+  curl -s --compressed -X PUT \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet&key=${YOUTUBE_APIKEY}" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  --data-raw '{"id": "'"$id"'", "snippet": {"title": "'"$title"'","categoryId":"28", "description": "'"$desc"'"} }' | jq -r '.snippet.description'
+}
+
+x_description() {
+  local ytid="${1##*/}"
+  [[ $ytid == live ]] && ytid=$(x_liveid)
+  if [[ $# > 1 ]]; then
+    x_set_desc "$@"
+    return $?
+  fi
+  if [[ -z "$ytid" ]]; then
+    local IFS=$'\n'
+    while read -r line; do
+      x_description $line
+    done
+    return 0
+  fi
+  curl -s \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet&key=${YOUTUBE_APIKEY}&id=$ytid" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed | 
+  jq -r '.items[0].snippet.description'
+}
+x_d() { x_description "$@"; }
+
+x_name() {
+  local ytid="${1##*/}"
+  if [[ -z "$ytid" ]]; then
+    local IFS=$'\n'
+    while read -r line; do
+      x_name "$line"
+    done
+    return 0
+  fi
+  curl -s \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet,fileDetails&key=${YOUTUBE_APIKEY}&id=$ytid" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed | 
+  jq -r '.items[0].fileDetails.fileName'
+}
+x_n() { x_name "$@"; }
+
+x_file() {
+  local ytid="${1##*/}"
+  if [[ -z "$ytid" ]]; then
+    local IFS=$'\n'
+    while read -r line; do
+      x_file "$line"
+    done
+    return 0
+  fi
+  curl -s \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet,fileDetails&key=${YOUTUBE_APIKEY}&id=$ytid" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  --compressed | 
+  jq -r '.items[0].fileDetails'
+}
+x_f() { x_file "$@"; }
+
+x_zet() {
+  local ytid="$1"
+  if [[ -z "$ytid" ]]; then
+    local IFS=$'\n'
+    while read -r line; do
+      x_zet "$line"
+    done
+    return 0
+  fi
+  local video=$(x_video "$ytid")
+  local name=$(jq -r ".fileDetails.fileName" <<< "$video")
+  local desc=$(jq -r ".snippet.description" <<< "$video")
+  if [[ $name =~ ^([0-9]{14,})\.mkv ]]; then
+    echo "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  if [[ $desc =~ \[ZETID:([0-9]{14,})\] ]]; then
+    echo "${BASH_REMATCH[1]}"
+    return 0
+  fi
+}
+
+x_sync() {
+  local id zetid ytid
+  if [[ $1 = last ]]; then
+    id=$(x_last)
+  else
+    id="${1##*/}"
+  fi
+  if [[ ${#id} = 14 ]]; then
+    zetid="$id"
+    ytid=$(zet video "$id")
+    ytid=${ytid##*/}
+  else
+    ytid="$id"
+    ytid=${ytid##*/}
+    zetid=$(yt zet "$ytid")
+  fi
+  local title=$(zet title "$zetid")
+  local desc=$(zet body "$zetid")$'\n'$(snip text/ytfoot)$'\n\n'"[ZETID:$zetid]"$'\n'"https://github.com/rwxrob/zet/tree/main/$zetid"
+  local eol=$'\n'
+  desc=$(jq -R -s -c <<< "$desc")
+  local resp=$(curl -s --compressed -X PUT \
+   "https://www.googleapis.com/youtube/v3/videos?part=snippet,status&key=${YOUTUBE_APIKEY}" \
+  -H "Authorization: Bearer ${YOUTUBE_TOKEN}" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  --data-raw '{"id": "'"$ytid"'", "status":{"privacyStatus":"public"},"snippet": {"title": "'"$title"'","categoryId":"28", "description": '"$desc"'} }')
+  local err=$(jq -r '.error.errors[0].message' <<< "$resp")
+  [[ $err != null ]] && echo "$err" && return 1
+  zet video "$zetid" "$ytid" > /dev/null
+  echo "👍 synced $zetid -> https://youtu.be/$ytid"
+}
+
+# --------------------- completion and delegation --------------------
+
+declare -a COMMANDS=()
+
+while read -r line; do
+    [[ $line =~ ^declare\ -f\ x_ ]] || continue
+    COMMANDS+=( ${line##declare -f x_} )
+done < <(declare -F)
+
+if [[ -n $COMP_LINE ]]; then
+    for c in "${COMMANDS[@]}"; do
+        [[ ${c:0:${#2}} == "${2,,}" ]] && echo "$c"
+    done
+    exit
+fi
+
+declare cmd="$1"; shift
+for c in "${COMMANDS[@]}"; do
+    if [[ $c == "$cmd" ]]; then
+        "x_$cmd" "$@"
+        exit $?
+    fi
+done
+
+x_usage "$@"

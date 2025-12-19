@@ -1,0 +1,8 @@
+#!/bin/bash
+
+filename="$HOME/Private/daily.log"
+logtext=`z isosec`
+
+echo "$logtext $@" >> "$filename"
+
+echo "LOGGED $@"

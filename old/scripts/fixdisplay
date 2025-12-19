@@ -1,0 +1,2 @@
+#!/bin/bash
+exec xrandr --output DisplayPort-0 --mode 5120x1440 --rate 119.97 --output DisplayPort-1 --mode 2560x1440 --rate 144 --left-of DisplayPort-0

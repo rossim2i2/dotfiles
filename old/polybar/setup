@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if type polybar > /dev/null 2>&1; then
+  ln -sf "$PWD" "$HOME/.config/polybar"
+else
+  echo "Polybar is not installed. Please install and try again."
+fi
+

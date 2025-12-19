@@ -1,0 +1,6 @@
+#!/bin/bash
+
+: "${my_uid:=`id -u`}"
+: "${my_gid=`id -g`}"
+
+sudo mount -t vfat /dev/sdb1 /media/usb -o "uid=$my_uid,gid=$my_gid"
