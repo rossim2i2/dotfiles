@@ -1,0 +1,39 @@
+[
+  {
+    "layer": "top",
+    "position": "top",
+    "output": "DP-3",
+
+    "modules-left": ["niri/workspaces"],
+    "modules-center": ["clock"],
+    "modules-right": ["pulseaudio", "tray", "custom/power"],
+  
+    "clock": {
+      "format": "{:%d | %H:%M}",
+      "format-alt": "{:%A, %B %d, %Y (%R)}",
+      "tooltip-format": "{:%A, %B %d, %Y}"
+    },
+
+    "custom/power": {
+      "format": "⏻",
+      "tooltip": "Power Menu",
+      "on-click": "~/.config/waybar/scripts/power-menu.sh",
+      "on-click right": "systemctl --user restart waybar"
+    }
+  },
+  {
+    "layer": "top",
+    "position": "top",
+    "output": "DP-1",
+
+    "modules-left": ["niri/workspaces"],
+    "modules-center": [],
+    "modules-right": ["clock"],
+
+    "clock": {
+      "format": "{:%d | %H:%M}",
+      "format-alt": "{:%A, %B %d, %Y (%R)}"
+    }
+  }
+]
+
