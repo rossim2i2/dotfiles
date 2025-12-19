@@ -1,10 +1,6 @@
 #!/bin/bash
 # .bashrc
 
-# if [ -f /usr/bin/fastfetch  ]; then
-# 	fastfetch
-# fi
-
 # Source global definitions
 if [ -f /etc/bashrc ]; then
     . /etc/bashrc
@@ -69,13 +65,71 @@ shopt -s histappend
 
 export USER="${USER:-$(whoami)}"
 export GITUSER="$USER"
+export REPOS="$HOME/Repos"
+export GHREPOS="$REPOS/github.com/$GITUSER"
+export DOTFILES="$GHREPOS/dotfiles"
+export SCRIPTS="$DOTFILES/scripts"
+export SNIPPETS="$DOTFILES/snippets"
 export EDITOR=nvim
 export VISUAL=nvim
 export EDITOR_PREFIX=nvim
 export TERM=xterm-256color
-export ZK_NOTEBOOK_DIR="$HOME/zet"
+export ZK_NOTEBOOK_DIR="$GHREPOS/zet"
 
 eval "$(dircolors -b)"
+
+[[ -d /.vim/spell ]] && export VIMSPELL=("$HOME/.vim/spell/*.add")
+
+# ------------------------------- path -------------------------------
+
+pathappend() {
+  declare arg
+  for arg in "$@"; do
+    test -d "$arg" || continue
+    PATH=${PATH//":$arg:"/:}
+    PATH=${PATH/#"$arg:"/}
+    PATH=${PATH/%":$arg"/}
+    export PATH="${PATH:+"$PATH:"}$arg"
+  done
+} && export pathappend
+
+pathprepend() {
+  for arg in "$@"; do
+    test -d "$arg" || continue
+    PATH=${PATH//:"$arg:"/:}
+    PATH=${PATH/#"$arg:"/}
+    PATH=${PATH/%":$arg"/}
+    export PATH="$arg${PATH:+":${PATH}"}"
+  done
+} && export pathprepend
+
+# remember last arg will be first in path
+pathprepend \
+  /usr/local/bin \
+  "$HOME/.local/bin" \
+  "$GHREPOS/cmd-"* \
+  "$SCRIPTS"
+
+pathappend \
+  /usr/local/opt/coreutils/libexec/gnubin \
+  '/mnt/c/Program Files/Oracle/VirtualBox' \
+  '/mnt/c/Windows' \
+  '/mnt/c/Program Files (x86)/VMware/VMware Workstation' \
+  /mingw64/bin \
+  /usr/local/bin \
+  /usr/local/go/bin \
+  /usr/local/sbin \
+  /usr/local/games \
+  /usr/games \
+  /usr/sbin \
+  /usr/bin \
+  /snap/bin \
+  /sbin \
+  /bin
+
+# ------------------------------ cdpath ------------------------------
+
+export CDPATH=".:$GHREPOS:$RWXREPOS:$DOTFILES:$REPOS:/media/$USER:$HOME"
 
 # --------------------------- smart prompt ---------------------------
 #                 (keeping in bashrc for portability)
@@ -83,24 +137,6 @@ eval "$(dircolors -b)"
 PROMPT_LONG=20
 PROMPT_MAX=95
 PROMPT_AT=@
-
-# --- Catppuccin Mocha colors for bash prompt (24-bit) ---
-CAT_BG="#1e1e2e"
-CAT_FG="#cdd6f4"
-CAT_BLUE="#89b4fa"
-CAT_MAGENTA="#f5c2e7"
-CAT_CYAN="#94e2d5"
-CAT_YELLOW="#f9e2af"
-CAT_GREEN="#a6e3a1"
-
-# Helper to convert hex to ANSI escape
-hexcolor () { printf '\[\e[38;2;%d;%d;%dm\]' "0x${1:1:2}" "0x${1:3:2}" "0x${1:5:2}"; }
-RESET='\[\e[0m\]'
-
-USER_COLOR=$(hexcolor "$CAT_MAGENTA")
-HOST_COLOR=$(hexcolor "$CAT_BLUE")
-PATH_COLOR=$(hexcolor "$CAT_YELLOW")
-SYMBOL_COLOR=$(hexcolor "$CAT_CYAN")
 
 __ps1() {
   local P='$' dir="${PWD##*/}" B countme short long double\
@@ -151,7 +187,10 @@ _have setxkbmap && test -n "$DISPLAY" && \
 # ------------------------------ aliases -----------------------------
 
 unalias -a
-#alias cat="bat"
+alias dot='cd $DOTFILES'
+alias scripts='cd $SCRIPTS'
+alias snippets='cd $SNIPPETS'
+alias cat="bat"
 alias free="free -h"
 alias df="df -h"
 alias clear='printf "\e[H\e[2J"'
