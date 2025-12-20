@@ -51,15 +51,15 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 --})
 
 -- open terminal in insert mode
-vim.api.nvim_create_autocmd('TermOpen', {
-  group = vim.api.nvim_create_augroup('custom-term-open', { clear = true }),
-  callback = function()
-    vim.opt.number = false
-    vim.opt.relativenumber = false
-    vim.cmd("startinsert")
-  end,
+vim.api.nvim_create_autocmd("TermOpen", {
+	group = vim.api.nvim_create_augroup("custom-term-open", { clear = true }),
+	callback = function()
+		vim.opt.number = false
+		vim.opt.relativenumber = false
+		vim.cmd("startinsert")
+	end,
 })
 
 vim.keymap.set("n", "<space>st", function()
-  vim.cmd("botright 15split | terminal")
+	vim.cmd("botright 15split | terminal")
 end)
