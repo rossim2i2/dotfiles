@@ -105,6 +105,11 @@ output "DP-3" {
     // If the position is unset or results in an overlap, the output is instead placed
     // automatically.
     position x=1280 y=0
+
+        layout {
+            center-focused-column "never"
+        }
+
 }
 
 output "DP-1" {
@@ -112,6 +117,12 @@ output "DP-1" {
         scale 1
         transform "normal"
         position x=0 y=1440
+
+        layout {
+            center-focused-column "always"
+            always-center-single-column
+            default-column-width { proportion 0.5; }
+        }
 }
 
 // Settings that influence how windows are positioned and sized.
@@ -127,8 +138,8 @@ layout {
     // - "always", the focused column will always be centered.
     // - "on-overflow", focusing a column will center it if it doesn't fit
     //   together with the previously focused column.
-    center-focused-column "never"
-    
+    // center-focused-column "never"
+
     // Tokyo Night Background Color
     background-color "#1a1b26"
 
@@ -137,8 +148,8 @@ layout {
         // Proportion sets the width as a fraction of the output width, taking gaps into account.
         // For example, you can perfectly fit four windows sized "proportion 0.25" on an output.
         // The default preset widths are 1/3, 1/2 and 2/3 of the output.
-        proportion 0.33333
         proportion 0.5
+        proportion 0.33333
         proportion 0.66667
 
         // Fixed sets the width in logical pixels exactly.
