@@ -7,7 +7,7 @@
     "modules-left": ["niri/workspaces"],
     "modules-center": ["clock"],
     "modules-right": ["pulseaudio", "tray", "custom/power"],
-  
+
     "clock": {
       "format": "{:%d | %H:%M}",
       "format-alt": "{:%A, %B %d, %Y (%R)}",
@@ -19,6 +19,17 @@
       "tooltip": "Power Menu",
       "on-click": "~/.config/waybar/scripts/power-menu.sh",
       "on-click right": "systemctl --user restart waybar"
+    },
+
+    "pulseaudio": {
+      "format": "{icon} {volume}%",
+      "format-muted": "󰝟 muted",
+      "format-icons": {
+        "default": ["󰕿", "󰖀", "󰕾"]
+      },
+      "scroll-step": 5,
+      "on-click": "pavucontrol",
+      "on-click-right": "pactl set-sink-mute @DEFAULT_SINK@ toggle"
     }
   },
   {
