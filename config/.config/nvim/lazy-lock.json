@@ -1,4 +1,5 @@
 {
+  "efmls-configs-nvim": { "branch": "main", "commit": "b175e35c5ea133e5bee42d90f91ce8419b4436a3" },
   "lazy.nvim": { "branch": "main", "commit": "306a05526ada86a7b30af95c5cc81ffba93fef97" },
   "lualine.nvim": { "branch": "master", "commit": "47f91c416daef12db467145e16bed5bbfe00add8" },
   "mason.nvim": { "branch": "main", "commit": "57e5a8addb8c71fb063ee4acda466c7cf6ad2800" },
