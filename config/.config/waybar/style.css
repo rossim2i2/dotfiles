@@ -1,1 +1,73 @@
-../../Repos/github.com/rossim2i2/dotfiles/config/.config/waybar/style.css
+/* Tokyo Night palette */
+@define-color bg        rgba(26, 27, 38, 0.92);
+@define-color fg        #c0caf5;
+@define-color blue      #7aa2f7;
+@define-color cyan      #7dcfff;
+@define-color purple    #bb9af7;
+@define-color green     #9ece6a;
+@define-color orange    #ff9e64;
+@define-color red       #f7768e;
+@define-color comment   #565f89;
+
+* {
+  font-family: JetBrainsMono Nerd Font, monospace;
+  font-size: 12px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: @bg;
+  color: @fg;
+  border-bottom: 1px solid @comment;
+}
+
+/* Workspaces */
+#workspaces button {
+  padding: 0 8px;
+  margin: 4px 2px;
+  color: @comment;
+  background: transparent;
+}
+
+#workspaces button.active {
+  color: @blue;
+  border-bottom: 2px solid @blue;
+}
+
+#workspaces button.focused {
+  color: @purple;
+}
+
+/* Clock */
+#clock {
+  color: @cyan;
+  padding: 0 12px;
+}
+
+/* Audio */
+#pulseaudio {
+  color: @green;
+  padding: 0 10px;
+}
+
+/* Tray */
+#tray {
+  padding: 0 8px;
+}
+
+tooltip {
+  background: @bg;
+  color: @fg;
+  border: 1px solid @comment;
+}
+
+#custom-power {
+  padding: 0 12px;
+  margin-left: 6px;
+  border-radius: 10px;
+}
+
+#custom-power:hover {
+  opacity: 0.85;
+}
+
