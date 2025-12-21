@@ -25,6 +25,11 @@ return function(capabilities)
 	local clangformat = require("efmls-configs.formatters.clang_format") -- c/cpp formatter
 	local solhint = require("efmls-configs.linters.solhint") -- solidity linter
 
+	local prettier_md = {
+		formatCommand = "prettier --stdin-filepath ${INPUT}",
+		formatStdin = true,
+	}
+
 	vim.lsp.config("efm", {
 		capabilities = capabilities,
 		filetypes = {
@@ -69,7 +74,7 @@ return function(capabilities)
 				json = { eslint_d, fixjson },
 				jsonc = { eslint_d, fixjson },
 				lua = { luacheck, stylua },
-				markdown = { prettier_d },
+				markdown = { prettier_md },
 				python = { flake8, black },
 				sh = { shellcheck, shfmt },
 				solidity = { solhint, prettier_d },
