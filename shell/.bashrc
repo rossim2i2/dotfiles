@@ -70,6 +70,7 @@ export GHREPOS="$REPOS/github.com/$GITUSER"
 export DOTFILES="$GHREPOS/dotfiles"
 export SCRIPTS="$DOTFILES/scripts"
 export SNIPPETS="$DOTFILES/snippets"
+export ZET="$GHREPOS/zet"
 export EDITOR=nvim
 export VISUAL=nvim
 export EDITOR_PREFIX=nvim
