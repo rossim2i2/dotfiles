@@ -59,3 +59,29 @@ end, { desc = "Ollama: summarize selection" })
 vim.keymap.set("v", "<leader>or", function()
 	require("ollama").prompt("Rewrite clearly and concisely:")
 end, { desc = "Ollama: rewrite selection" })
+
+-- Gen binds
+local ai_guard = require("utils.ai_guard")
+
+-- gen.nvim (visual transforms)
+vim.keymap.set("v", "<leader>za", function()
+  if not ai_guard.ensure_in_zet() then return end
+  vim.cmd("Gen ZK_Atomic")
+end, { desc = "ZK: atomic notes from selection" })
+
+vim.keymap.set("v", "<leader>zt", function()
+  if not ai_guard.ensure_in_zet() then return end
+  vim.cmd("Gen ZK_TitleTags")
+end, { desc = "ZK: title + tags from selection" })
+
+vim.keymap.set("v", "<leader>zr", function()
+  if not ai_guard.ensure_in_zet() then return end
+  vim.cmd("Gen ZK_Rewrite")
+end, { desc = "ZK: rewrite selection" })
+
+-- optional: open Gen prompt picker
+vim.keymap.set({ "n", "v" }, "<leader>zg", function()
+  if not ai_guard.ensure_in_zet() then return end
+  vim.cmd("Gen")
+end, { desc = "ZK: Gen prompt picker" })
+
