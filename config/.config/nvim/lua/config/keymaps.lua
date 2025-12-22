@@ -48,3 +48,14 @@ vim.keymap.set("t", "<esc><esc>", "<c-\\><c-n>")
 
 -- Oil NVIM File Tree
 vim.keymap.set("n", "-", "<cmd>Oil<CR>")
+
+-- Ollma binds
+vim.keymap.set("n", "<leader>on", ":Ollama<CR>", { desc = "Ollama: new chat" })
+
+vim.keymap.set("v", "<leader>os", function()
+	require("ollama").prompt("Summarize and convert into atomic notes:")
+end, { desc = "Ollama: summarize selection" })
+
+vim.keymap.set("v", "<leader>or", function()
+	require("ollama").prompt("Rewrite clearly and concisely:")
+end, { desc = "Ollama: rewrite selection" })
