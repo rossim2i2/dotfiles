@@ -26,7 +26,7 @@ return function(capabilities)
 	local solhint = require("efmls-configs.linters.solhint") -- solidity linter
 
 	local prettier_md = {
-		formatCommand = "prettier --stdin-filepath ${INPUT}",
+		formatCommand = "prettierd --stdin-filepath ${INPUT}",
 		formatStdin = true,
 	}
 
