@@ -34,5 +34,10 @@ return {
 				cwd = "~/Repos/github.com/rossim2i2/zet",
 			})
 		end)
+		map("n", "<leader>fi", function()
+			builtin.find_files({
+				cwd = "~/Repos/github.com/rossim2i2/zet/inbox",
+			})
+		end)
 	end,
 }
