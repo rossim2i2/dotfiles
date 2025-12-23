@@ -188,6 +188,9 @@ _have setxkbmap && test -n "$DISPLAY" && \
 # ------------------------------ aliases -----------------------------
 
 unalias -a
+alias '?'=duck
+alias '??'=google
+alias '???'=bing
 alias dot='cd $DOTFILES'
 alias scripts='cd $SCRIPTS'
 alias snippets='cd $SNIPPETS'
