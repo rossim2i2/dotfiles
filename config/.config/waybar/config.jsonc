@@ -3,48 +3,63 @@
     "layer": "top",
     "position": "top",
     "output": "DP-3",
-
-    "modules-left": ["niri/workspaces"],
-    "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "tray", "custom/power"],
-
+    "modules-left": [
+      "niri/workspaces"
+    ],
+    "modules-center": [
+      "clock"
+    ],
+    "modules-right": [
+      "pulseaudio",
+      "temperature",
+      "tray",
+      "custom/power"
+    ],
     "clock": {
       "format": "{:%d | %H:%M}",
       "format-alt": "{:%A, %B %d, %Y (%R)}",
       "tooltip-format": "{:%A, %B %d, %Y}"
     },
-
     "custom/power": {
       "format": "⏻",
       "tooltip": "Power Menu",
       "on-click": "~/.config/waybar/scripts/power-menu.sh",
       "on-click right": "systemctl --user restart waybar"
     },
-
     "pulseaudio": {
       "format": "{icon} {volume}%",
       "format-muted": "󰝟 muted",
       "format-icons": {
-        "default": ["󰕿", "󰖀", "󰕾"]
+        "default": [
+          "󰕿",
+          "󰖀",
+          "󰕾"
+        ]
       },
       "scroll-step": 5,
       "on-click": "pavucontrol",
       "on-click-right": "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+    },
+    "temperature": {
+      "hwmon-path": "/sys/class/hwmon/hwmon3/temp1_input",
+      "critical-threshold": 85,
+      "format": " {temperatureC}°C"
     }
   },
   {
     "layer": "top",
     "position": "top",
     "output": "DP-1",
-
-    "modules-left": ["niri/workspaces"],
-    "modules-center": ["clock"],
+    "modules-left": [
+      "niri/workspaces"
+    ],
+    "modules-center": [
+      "clock"
+    ],
     "modules-right": [],
-
     "clock": {
       "format": "{:%d | %H:%M}",
       "format-alt": "{:%A, %B %d, %Y (%R)}"
     }
   }
 ]
-
