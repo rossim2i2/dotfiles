@@ -34,10 +34,20 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 local lsp_fmt_group = vim.api.nvim_create_augroup("FormatOnSaveGroup", {})
 vim.api.nvim_create_autocmd("BufWritePre", {
 	group = lsp_fmt_group,
-	callback = function()
+	callback = function(args)
 		local efm = vim.lsp.get_clients({ name = "efm" })
+		local filename = vim.api.nvim_buf_get_name(args.buf)
 		if vim.tbl_isempty(efm) then
 			return
+		end
+		--paterns to exclude
+		local disable_patterns = {
+			"defualt.md",
+		}
+		for _, pattern in ipairs(disable_patterns) do
+			if filename:match(pattern) then
+				return
+			end
 		end
 		vim.lsp.buf.format({ name = "efm", async = true })
 	end,
@@ -65,13 +75,12 @@ vim.keymap.set("n", "<space>st", function()
 end)
 
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "markdown", "text" },
-  callback = function()
-    vim.opt_local.wrap = true
-    vim.opt_local.linebreak = true
-    vim.opt_local.breakindent = true
-    vim.opt_local.textwidth = 0
-    vim.opt_local.colorcolumn = "80"
-  end,
+	pattern = { "markdown", "text" },
+	callback = function()
+		vim.opt_local.wrap = true
+		vim.opt_local.linebreak = true
+		vim.opt_local.breakindent = true
+		vim.opt_local.textwidth = 0
+		vim.opt_local.colorcolumn = "80"
+	end,
 })
-
