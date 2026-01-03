@@ -45,25 +45,29 @@ pick_hwmon() {
 read_temp_c() {
   local hwmon="$1"
 
-  # Prefer temp1_input, else try temp2/temp3
-  for f in "$hwmon"/temp{1..9}_input; do
+  # Prefer Tctl explicitly
+  local f
+  for f in "$hwmon"/temp*_label; do
     [[ -r "$f" ]] || continue
-    local v
-    v="$(<"$f")"  # millidegrees C usually
-    # sanity: must be integer and in a reasonable range
-    [[ "$v" =~ ^[0-9]+$ ]] || continue
-
-    if (( v > 1000 )); then
+    if grep -q '^Tctl$' "$f"; then
+      local input="${f/_label/_input}"
+      local v
+      v="$(<"$input")"
       echo $(( v / 1000 ))
       return 0
     fi
-    # Some drivers might already expose degrees
-    if (( v > 0 && v < 200 )); then
-      echo "$v"
-      return 0
-    fi
   done
-  return 1
+
+  # Fallback: highest temp (safe default)
+  local max=0
+  for f in "$hwmon"/temp*_input; do
+    [[ -r "$f" ]] || continue
+    local v
+    v="$(<"$f")"
+    (( v > max )) && max="$v"
+  done
+
+  (( max > 0 )) && echo $(( max / 1000 )) || echo "N/A"
 }
 
 hwmon="$(pick_hwmon)" || { echo "N/A"; exit 0; }
