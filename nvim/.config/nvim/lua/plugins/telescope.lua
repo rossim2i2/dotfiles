@@ -39,5 +39,34 @@ return {
 				cwd = "~/Repos/github.com/rossim2i2/zet/inbox",
 			})
 		end)
+
+		map("n", "<leader>fw", function()
+			builtin.find_files({
+				cwd = "~/Repos/github.com/rossim2i2/zet/_work/inbox",
+			})
+		end)
+
+		-- Search all open tasks: lines like "- [ ] ..."
+		map("n", "<leader>wa", function()
+			require("telescope.builtin").live_grep({
+				cwd = "~/Repos/github.com/rossim2i2/zet/_work",
+				default_text = "^- \\[ \\] ",
+				prompt_title = "Open actions (- [ ])",
+			})
+		end, { desc = "Tasks: search all open actions" })
+
+		-- Prompt for a person (e.g. sarah) and search open tasks assigned to them
+		map("n", "<leader>wp", function()
+			vim.ui.input({ prompt = "Person (without @): " }, function(person)
+				if not person or person == "" then
+					return
+				end
+				require("telescope.builtin").live_grep({
+					cwd = "~/Repos/github.com/rossim2i2/zet/_work",
+					default_text = "^- \\[ \\] .*@" .. person .. "\\b",
+					prompt_title = "Open actions for @" .. person,
+				})
+			end)
+		end, { desc = "Tasks: search open actions by person" })
 	end,
 }

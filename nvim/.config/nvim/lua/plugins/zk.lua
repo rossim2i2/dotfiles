@@ -135,5 +135,17 @@ return {
 				notebook_path = zet_path,
 			})
 		end, "Zk: Tags")
+
+		map("<leader>zw", function()
+			zk_cmd.get("ZkNew")({ notebook_path = zet_path, group = "work_inbox" })
+		end, "Zk: Work inbox note")
+
+		map("<leader>zm", function()
+			zk_cmd.get("ZkNew")({ notebook_path = zet_path, group = "work_meeting" })
+		end, "Zk: Work meeting note")
+
+		map("<leader>zd", function()
+			zk_cmd.get("ZkNew")({ notebook_path = zet_path, group = "work_daily" })
+		end, "Zk: Work daily note")
 	end,
 }
