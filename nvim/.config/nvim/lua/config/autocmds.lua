@@ -60,6 +60,16 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 --	callback = on_attach,
 --})
 
+-- Enable spell checking only for markdown files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = function()
+    vim.opt_local.spell = true
+    vim.opt_local.spelllang = "en_us"  -- change to your preferred language
+    vim.opt_local.spellsuggest = "best,9"
+  end,
+})
+
 -- open terminal in insert mode
 vim.api.nvim_create_autocmd("TermOpen", {
 	group = vim.api.nvim_create_augroup("custom-term-open", { clear = true }),
