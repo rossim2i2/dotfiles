@@ -231,3 +231,23 @@ alias lla='ls -Al'                # List and Hidden Files
 alias las='ls -A'                 # Hidden Files
 alias lls='ls -l'                 # List
 
+# ----------------------------
+# ZK action item helpers
+# ----------------------------
+
+# Show all open action items
+zlstodo() {
+  (cd "$HOME/zet" && rg -n --glob="*.md" '^- \[ \] ' .)
+}
+
+# Show open action items for a specific person
+# Usage: ztodop sarah
+zlstodop() {
+  if [ -z "$1" ]; then
+    echo "Usage: ztodop <person>"
+    return 1
+  fi
+
+  local person="$1"
+  (cd "$HOME/zet" && rg -n --glob="*.md" "^- \\[ \\].*@${person}\\b" .)
+}
