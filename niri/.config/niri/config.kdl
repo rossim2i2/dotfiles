@@ -637,5 +637,6 @@ binds {
     Mod+Shift+P { power-off-monitors; }
 
     Mod+Shift+M { spawn "/home/rossim2i2/Repos/github.com/rossim2i2/zet/scripts/capture-inbox-fuzzel.sh"; }
+    Mod+Shift+W { spawn "/home/rossim2i2/Repos/github.com/rossim2i2/zet/scripts/work-capture-inbox-fuzzel.sh"; }
 
 }
