@@ -6,13 +6,26 @@ end
 
 local function is_inbox_file(path)
 	local root = zet_root()
-	return path:sub(1, #root + 7) == (root .. "/inbox/")
+	return path:sub(1, #root + 7) == (root .. "/inbox/") or path:sub(1, #root + 13) == (root .. "/_work/inbox/")
+end
+
+local function is_work_file(path)
+	local root = zet_root()
+	return path:sub(1, #root + 7) == (root .. "/_work/")
 end
 
 local function is_git_repo()
 	local root = zet_root()
 	local out = vim.fn.system({ "git", "-C", root, "rev-parse", "--is-inside-work-tree" })
 	return out:match("true") ~= nil
+end
+
+local function should_use_git_for_file(abs_path)
+	-- Never use git for anything under _work/
+	if is_work_file(abs_path) then
+		return false
+	end
+	return is_git_repo()
 end
 
 local function is_tracked(relpath)
@@ -89,7 +102,7 @@ function M.process_current_inbox()
 
 	local root = zet_root()
 	local rel = rel_from_root(file)
-	local use_git = is_git_repo()
+	local use_git = should_use_git_for_file(file)
 	local tracked = use_git and is_tracked(rel)
 
 	local actions = {
@@ -110,12 +123,20 @@ function M.process_current_inbox()
 		end
 
 		if choice.value == "done" then
-			local dst_abs = root .. "/archive/inbox/" .. vim.fn.fnamemodify(file, ":t")
+			local basename = vim.fn.fnamemodify(file, ":t")
+			local dst_abs
+
+			if is_work_file(file) then
+				dst_abs = root .. "/_work/archive/inbox/" .. basename
+			else
+				dst_abs = root .. "/archive/inbox/" .. basename
+			end
+
 			local dst_rel = rel_from_root(dst_abs)
 			local ok = false
 
 			if tracked then
-				ensure_dir(root .. "/archive/inbox")
+				ensure_dir(vim.fn.fnamemodify(dst_abs, ":h"))
 				ok = git_mv(rel, dst_rel)
 			else
 				ok = fs_mv(file, dst_abs)
