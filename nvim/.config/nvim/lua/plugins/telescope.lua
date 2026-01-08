@@ -46,6 +46,18 @@ return {
 			})
 		end)
 
+		map("n", "<leader>fm", function()
+			builtin.find_files({
+				cwd = "~/Repos/github.com/rossim2i2/zet/_work/active",
+			})
+		end, { desc = "Find files in Work Active" })
+
+		map("n", "<leader>wf", function()
+			builtin.live_grep({
+				cwd = "~/Repos/github.com/rossim2i2/zet/_work",
+			})
+		end, { desc = "Work Zet Fuzzy Find" })
+
 		-- Search all open tasks: lines like "- [ ] ..."
 		map("n", "<leader>wa", function()
 			require("telescope.builtin").live_grep({
