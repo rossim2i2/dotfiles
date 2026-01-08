@@ -1,78 +1,74 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pick a temperature sensor in a stable way (by hwmon "name").
-# Works across many AMD/Intel systems and laptops.
+# Cache the chosen temp*_input path so we don't rescan sysfs every interval.
+CACHE="${XDG_RUNTIME_DIR:-/tmp}/waybar-temp-input"
 
-# Preferred hwmon "name" values in order
 preferred_names=(
-  k10temp          # AMD CPU
-  coretemp         # Intel CPU
-  thinkpad         # ThinkPad EC (sometimes)
-  thinkpad_hwmon   # ThinkPad hwmon
-  acpitz           # ACPI thermal zone (fallback; can be weird)
+  k10temp
+  coretemp
+  thinkpad
+  thinkpad_hwmon
+  acpitz
 )
 
-find_hwmon_by_name() {
-  local want="$1"
+pick_input_path() {
+  local d name f label input
+
+  # Try preferred hwmon names first
   for d in /sys/class/hwmon/hwmon*; do
     [[ -r "$d/name" ]] || continue
-    local name
     name="$(<"$d/name")"
-    if [[ "$name" == "$want" ]]; then
-      echo "$d"
-      return 0
-    fi
+
+    for want in "${preferred_names[@]}"; do
+      [[ "$name" == "$want" ]] || continue
+
+      # Prefer Tctl if present
+      for label in "$d"/temp*_label; do
+        [[ -r "$label" ]] || continue
+        if [[ "$( <"$label" )" == "Tctl" ]]; then
+          input="${label/_label/_input}"
+          [[ -r "$input" ]] && { echo "$input"; return 0; }
+        fi
+      done
+
+      # Otherwise use temp1_input if readable
+      [[ -r "$d/temp1_input" ]] && { echo "$d/temp1_input"; return 0; }
+
+      # Or first readable temp*_input
+      for f in "$d"/temp*_input; do
+        [[ -r "$f" ]] && { echo "$f"; return 0; }
+      done
+    done
   done
+
+  # Fallback: any readable temp*_input anywhere
+  for f in /sys/class/hwmon/hwmon*/temp*_input; do
+    [[ -r "$f" ]] && { echo "$f"; return 0; }
+  done
+
   return 1
 }
 
-pick_hwmon() {
-  local d
-  for n in "${preferred_names[@]}"; do
-    if d="$(find_hwmon_by_name "$n")"; then
-      echo "$d"
-      return 0
-    fi
-  done
-  # Last resort: any hwmon that has a readable temp input
-  for d in /sys/class/hwmon/hwmon*; do
-    [[ -r "$d/temp1_input" ]] && { echo "$d"; return 0; }
-  done
-  return 1
+read_c_from_input() {
+  local input="$1" v
+  v="$(<"$input")"
+  echo $(( v / 1000 ))
 }
 
-read_temp_c() {
-  local hwmon="$1"
+# Use cached path if valid
+if [[ -r "$CACHE" ]]; then
+  input="$(<"$CACHE")"
+  if [[ -r "$input" ]]; then
+    echo "$(read_c_from_input "$input")°C"
+    exit 0
+  fi
+fi
 
-  # Prefer Tctl explicitly
-  local f
-  for f in "$hwmon"/temp*_label; do
-    [[ -r "$f" ]] || continue
-    if grep -q '^Tctl$' "$f"; then
-      local input="${f/_label/_input}"
-      local v
-      v="$(<"$input")"
-      echo $(( v / 1000 ))
-      return 0
-    fi
-  done
-
-  # Fallback: highest temp (safe default)
-  local max=0
-  for f in "$hwmon"/temp*_input; do
-    [[ -r "$f" ]] || continue
-    local v
-    v="$(<"$f")"
-    (( v > max )) && max="$v"
-  done
-
-  (( max > 0 )) && echo $(( max / 1000 )) || echo "N/A"
-}
-
-hwmon="$(pick_hwmon)" || { echo "N/A"; exit 0; }
-temp_c="$(read_temp_c "$hwmon")" || { echo "N/A"; exit 0; }
-
-# Output for Waybar
-echo "${temp_c}°C"
-
+# (Re)discover and cache
+if input="$(pick_input_path)"; then
+  printf '%s' "$input" > "$CACHE"
+  echo "$(read_c_from_input "$input")°C"
+else
+  echo "N/A"
+fi
