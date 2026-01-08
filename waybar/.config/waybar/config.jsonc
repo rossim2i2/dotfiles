@@ -12,7 +12,7 @@
     "modules-right": [
       "custom/temp",
       "pulseaudio",
-      "tray",
+      // "tray",
       "custom/power"
     ],
     "clock": {
@@ -24,7 +24,7 @@
       "format": "⏻",
       "tooltip": "Power Menu",
       "on-click": "~/.config/waybar/scripts/power-menu.sh",
-      "on-click right": "systemctl --user restart waybar"
+      "on-click-right": "systemctl --user restart waybar"
     },
     "pulseaudio": {
       "format": "{icon} {volume}%",
@@ -42,7 +42,7 @@
     },
     "custom/temp": {
       "exec": "~/.config/waybar/scripts/temp.sh",
-      "interval": 2,
+      "interval": 5,
       "return-type": "text",
       "tooltip": false
     }
