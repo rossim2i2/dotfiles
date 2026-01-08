@@ -91,3 +91,167 @@ vim.keymap.set("n", "<leader>zpm", function() zet_process("meeting") end, { desc
 vim.keymap.set("n", "<leader>zpp", function() zet_process("project") end, { desc = "Zet: process -> project" })
 vim.keymap.set("n", "<leader>zps", function() zet_process("sync") end,    { desc = "Zet: process -> sync" })
 vim.keymap.set("n", "<leader>zpn", function() zet_process("note") end,    { desc = "Zet: process -> note" })
+-- Zet (no plugins): inbox picker + process shortcut
+-- Requires: C:\ZetScripts\zet-new.ps1 and C:\ZetScripts\zet-process.ps1
+-- Optional but recommended: zet-new.ps1 outputs Resolve-Path absolute path.
+
+local function zet_systemlist(args)
+  local out = vim.fn.systemlist(args)
+  return out
+end
+
+local function zet_get_root()
+  -- Pull $ZetRoot from C:\ZetScripts\zet.config.ps1
+  local cmd = {
+    "pwsh", "-NoProfile", "-Command",
+    ". 'C:\\ZetScripts\\zet.config.ps1'; $ZetRoot"
+  }
+  local out = zet_systemlist(cmd)
+  local root = (out[#out] or ""):gsub("\r", "")
+  if root == "" then
+    vim.notify("Zet: failed to read ZetRoot from zet.config.ps1", vim.log.levels.ERROR)
+  end
+  return root
+end
+
+local function zet_path_join(a, b)
+  if a:sub(-1) == "\\" then return a .. b end
+  return a .. "\\" .. b
+end
+
+local function zet_basename(p)
+  return (p:gsub("\\+$", "")):match("([^\\]+)$") or p
+end
+
+local function zet_read_title_from_yaml(path)
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or not lines then return "" end
+  -- look only in first ~60 lines to avoid loading huge files
+  local max = math.min(#lines, 60)
+  for i = 1, max do
+    local line = lines[i]
+    local t = line:match('^title:%s*"(.*)"%s*$')
+    if t then return t end
+  end
+  return ""
+end
+
+local function zet_list_inbox_files()
+  local root = zet_get_root()
+  if root == "" then return {} end
+
+  local inbox = zet_path_join(root, "Inbox")
+
+  -- Use PowerShell to list files (fast, reliable on Windows, handles spaces).
+  -- Output: full paths, newest first.
+  local cmd = {
+    "pwsh", "-NoProfile", "-Command",
+    string.format("Get-ChildItem -LiteralPath '%s' -File -Filter *.md | Sort-Object LastWriteTime -Descending | ForEach-Object { $_.FullName }", inbox:gsub("'", "''"))
+  }
+
+  local out = zet_systemlist(cmd)
+  local files = {}
+  for _, p in ipairs(out) do
+    p = (p or ""):gsub("\r", "")
+    if p ~= "" then table.insert(files, p) end
+  end
+  return files
+end
+
+local function zet_inbox_picker()
+  local files = zet_list_inbox_files()
+  if #files == 0 then
+    vim.notify("Zet: Inbox is empty (or Inbox folder missing)", vim.log.levels.INFO)
+    return
+  end
+
+  -- Build display entries
+  local items = {}
+  for _, p in ipairs(files) do
+    local base = zet_basename(p)
+    -- nicer label: "yyyyMMddHHmmss - slug" (no .md)
+    local label = base:gsub("%.md$", "")
+    -- show YAML title if present (optional)
+    local yaml_title = zet_read_title_from_yaml(p)
+    if yaml_title ~= "" then
+      label = label .. "  —  " .. yaml_title
+    end
+    table.insert(items, { label = label, path = p })
+  end
+
+  vim.ui.select(items, {
+    prompt = "Zet Inbox (select to open):",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then return end
+    vim.cmd("edit " .. vim.fn.fnameescape(choice.path))
+  end)
+end
+
+local function zet_prompt(prompt, default)
+  local t = vim.fn.input({ prompt = prompt, default = default or "" })
+  if t == nil then return "" end
+  return t
+end
+
+local function zet_process_current()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    vim.notify("Zet: current buffer has no file path", vim.log.levels.ERROR)
+    return
+  end
+
+  local choices = {
+    { label = "archive", to = "archive" },
+    { label = "note",    to = "note" },
+    { label = "meeting", to = "meeting" },
+    { label = "project", to = "project" },
+    { label = "sync",    to = "sync" },
+  }
+
+  vim.ui.select(choices, {
+    prompt = "Process inbox item →",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    if not choice then return end
+
+    local current_title = zet_read_title_from_yaml(path)
+    local new_title = zet_prompt("New title (blank keeps current): ", current_title)
+    if new_title == "" then new_title = current_title end
+
+    -- Build pwsh command
+    local cmd = {
+      "pwsh", "-NoProfile", "-File", "C:\\ZetScripts\\zet-process.ps1",
+      "-Path", path,
+      "-To", choice.to,
+    }
+    if new_title ~= "" then
+      table.insert(cmd, "-Title")
+      table.insert(cmd, new_title)
+    end
+
+    local out = zet_systemlist(cmd)
+    local newpath = (out[#out] or ""):gsub("\r", "")
+
+    if newpath == "" then
+      vim.notify("Zet: process failed (no path returned)", vim.log.levels.ERROR)
+      return
+    end
+
+    -- Open the moved file, and wipe the old buffer
+    local oldbuf = vim.api.nvim_get_current_buf()
+    vim.cmd("edit " .. vim.fn.fnameescape(newpath))
+    pcall(vim.api.nvim_buf_delete, oldbuf, { force = true })
+  end)
+end
+
+-- Commands
+vim.api.nvim_create_user_command("ZetInbox", zet_inbox_picker, {})
+vim.api.nvim_create_user_command("ZetProcess", zet_process_current, {})
+
+-- Keymaps (customize as you like)
+-- Telescope-like inbox picker:
+vim.keymap.set("n", "<leader>zf", zet_inbox_picker, { desc = "Zet: Inbox picker" })
+
+-- Process current inbox item:
+vim.keymap.set("n", "<leader>zp", zet_process_current, { desc = "Zet: Process current note" })
