@@ -2,7 +2,13 @@
 -- init.lua (plugin-free Zet workflow on Windows)
 --  - <leader>z... = capture/actions
 --  - <leader>f... = find/pickers (current tab + preview pane)
+--  - <leader>fg   = fuzzy search (content-aware, no plugins)
 --  - Action Items: [ ] @person ... (open)   [x] @person ... (done)
+--
+-- Requirements:
+--   - PowerShell (pwsh) available
+--   - C:\ZetScripts\zet.config.ps1 sets $ZetRoot
+--   - C:\ZetScripts\zet-new.ps1 / zet-process.ps1 / zet-archive.ps1 exist
 -- ============================================================
 
 ------------------------------------------------------------
@@ -291,7 +297,7 @@ local function zet_process_menu()
 end
 
 -- ============================================================
--- Finder UI (current tab, preview split, Esc quits)
+-- Shared UI helpers (scratch buffers + preview split)
 -- ============================================================
 
 local function buf_scratch(name)
@@ -313,6 +319,21 @@ end
 local function basename(p)
   return (p:gsub("\\+$", "")):match("([^\\]+)$") or p
 end
+
+local function read_yaml_title(path)
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or not lines then return "" end
+  local max = math.min(#lines, 60)
+  for i = 1, max do
+    local t = lines[i]:match('^title:%s*"(.*)"%s*$')
+    if t then return t end
+  end
+  return ""
+end
+
+-- ============================================================
+-- Picker: Files (preview), current tab
+-- ============================================================
 
 -- PowerShell list: outputs "kind|fullpath" sorted globally by LastWriteTimeUtc
 local function ps_list(kind, limit)
@@ -501,10 +522,8 @@ local function open_picker(kind)
       state.prev_win = nil
     end
 
-    if vim.api.nvim_win_is_valid(state.list_win) then
-      vim.api.nvim_set_current_win(state.list_win)
-      vim.cmd({ cmd = "edit", args = { p } })
-    end
+    vim.api.nvim_set_current_win(state.list_win)
+    vim.cmd({ cmd = "edit", args = { p } })
   end
 
   local function quit()
@@ -543,10 +562,8 @@ local function open_picker(kind)
     vim.keymap.set("n", "<Up>", function() move(-1) end, mapopts)
 
     vim.keymap.set("n", "<CR>", open_selected, mapopts)
-
     vim.keymap.set("n", "<Esc>", quit, mapopts)
     vim.keymap.set("n", "q", quit, mapopts)
-
     vim.keymap.set("n", "r", refresh, mapopts)
 
     vim.keymap.set("n", "/", function()
@@ -567,7 +584,7 @@ local function open_picker(kind)
 end
 
 -- ============================================================
--- Action Items Picker (open items + by @person)
+-- Picker: Action Items (open items + by @person), preview
 -- ============================================================
 
 local function ps_actions_list(mode, person, limit)
@@ -807,10 +824,8 @@ local function open_actions_picker(opts)
     vim.keymap.set("n", "<Up>", function() move(-1) end, mapopts)
 
     vim.keymap.set("n", "<CR>", open_selected, mapopts)
-
     vim.keymap.set("n", "<Esc>", quit, mapopts)
     vim.keymap.set("n", "q", quit, mapopts)
-
     vim.keymap.set("n", "r", refresh, mapopts)
 
     vim.keymap.set("n", "/", function()
@@ -827,6 +842,418 @@ local function open_actions_picker(opts)
   if not ok then
     cleanup()
     vim.notify("Actions picker error: " .. tostring(err), vim.log.levels.ERROR)
+  end
+end
+
+-- ============================================================
+-- Picker: Fuzzy Search (content-aware), preview
+--   - Scope: all folders EXCEPT Archive
+--   - Query entered via "/" (like your other pickers)
+--   - "Fuzzy": subsequence + token coverage scoring
+--   - Results: top 25
+--
+-- Notes:
+--   - To keep it fast without rg, we only scan a RECENT candidate pool
+--     (default 500 newest files across Inbox/Meetings/Notes/Projects/Syncs).
+--   - We fuzzy-score against: filename + YAML title + first ~400 lines of content.
+--   - If you want “everything” (not just recent pool), we can, but it’ll be slower.
+-- ============================================================
+
+local function ps_recent_pool_no_archive(limit)
+  local root = Zet.root()
+  if root == "" then return {} end
+
+  local folders = { "Inbox", "Meetings", "Notes", "Projects", "Syncs" }
+  local specs = {}
+  for _, f in ipairs(folders) do
+    local d = (root .. "\\" .. f):gsub("'", "''")
+    table.insert(specs, ("'%s'"):format(d))
+  end
+
+  local ps = ([[
+    $dirs = @(%s)
+    $items = foreach ($d in $dirs) {
+      if (Test-Path -LiteralPath $d) {
+        Get-ChildItem -LiteralPath $d -File -Filter *.md -Recurse -ErrorAction SilentlyContinue |
+          ForEach-Object {
+            [pscustomobject]@{ Path=$_.FullName; Time=$_.LastWriteTimeUtc }
+          }
+      }
+    }
+    $items |
+      Sort-Object Time -Descending |
+      Select-Object -First %d |
+      ForEach-Object { $_.Path }
+  ]]):format(table.concat(specs, ","), limit)
+
+  local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
+  local paths = {}
+  for _, p in ipairs(out) do
+    p = (p or ""):gsub("\r", "")
+    if p ~= "" then table.insert(paths, p) end
+  end
+  return paths
+end
+
+-- Basic fuzzy scoring helpers (no plugins)
+local function norm(s)
+  s = (s or ""):lower()
+  s = s:gsub("[^%w%s#@%-_./]", " ") -- keep useful chars for tags/mentions/paths
+  s = s:gsub("%s+", " ")
+  return s
+end
+
+-- subsequence match score: higher is better, -1 if no match
+local function fuzzy_subseq_score(q, s)
+  if q == "" then return -1 end
+  local qi, si = 1, 1
+  local score = 0
+  local last_match = 0
+  while qi <= #q and si <= #s do
+    if q:sub(qi, qi) == s:sub(si, si) then
+      score = score + 3
+      if last_match > 0 then
+        local gap = si - last_match
+        if gap == 1 then score = score + 2 else score = score - math.min(3, gap) end
+      end
+      last_match = si
+      qi = qi + 1
+    end
+    si = si + 1
+  end
+  if qi <= #q then return -1 end
+  score = score + math.max(0, 10 - (#s - last_match)) -- small boost if match ends near end
+  return score
+end
+
+local function split_tokens(q)
+  local t = {}
+  q = norm(q)
+  for w in q:gmatch("%S+") do
+    table.insert(t, w)
+  end
+  return t
+end
+
+-- Combined fuzzy score: subsequence of whole query + token coverage + exact substring boosts
+local function fuzzy_score(query, hay)
+  local qn = norm(query)
+  local hn = norm(hay)
+  if qn == "" then return -1 end
+
+  local score = 0
+
+  -- exact substring boost
+  local p = hn:find(qn, 1, true)
+  if p then score = score + 80 - math.min(60, p) end
+
+  -- whole-query subsequence score
+  local s1 = fuzzy_subseq_score(qn:gsub("%s+", ""), hn:gsub("%s+", ""))
+  if s1 > 0 then score = score + s1 end
+
+  -- token coverage
+  local tokens = split_tokens(qn)
+  local covered = 0
+  for _, tok in ipairs(tokens) do
+    local pt = hn:find(tok, 1, true)
+    if pt then
+      covered = covered + 1
+      score = score + 20 - math.min(15, pt)
+    else
+      -- subseq per-token
+      local st = fuzzy_subseq_score(tok, hn)
+      if st > 0 then
+        score = score + math.floor(st / 2)
+      else
+        score = score - 10
+      end
+    end
+  end
+  score = score + (covered * 10)
+
+  return score
+end
+
+local function file_snippet_for_fuzzy(path)
+  local name = basename(path)
+  local title = read_yaml_title(path)
+
+  -- read only first chunk for performance
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or not lines then
+    return name .. " " .. title, {}
+  end
+
+  local max_lines = math.min(#lines, 400)
+  local parts = { name }
+  if title ~= "" then table.insert(parts, title) end
+
+  for i = 1, max_lines do
+    parts[#parts + 1] = lines[i]
+  end
+
+  -- compact string for scoring
+  local blob = table.concat(parts, "\n")
+
+  return blob, lines
+end
+
+local function open_fuzzy_picker()
+  local orig_win = vim.api.nvim_get_current_win()
+  local orig_buf = vim.api.nvim_get_current_buf()
+  local orig_view = vim.fn.winsaveview()
+
+  local state = {
+    limit_results = 25,     -- you asked for top 25
+    pool_limit = 500,       -- candidate pool size (recent newest files); tune if needed
+    query = "",             -- set via /
+    items = {},             -- {path, name, score}
+    idx = 1,
+
+    orig_win = orig_win,
+    orig_buf = orig_buf,
+    orig_view = orig_view,
+
+    list_win = orig_win,
+    list_buf = nil,
+    prev_win = nil,
+    prev_buf = nil,
+
+    pool = nil,             -- cached recent paths
+  }
+
+  local function cleanup()
+    if state.prev_win and vim.api.nvim_win_is_valid(state.prev_win) then
+      pcall(vim.api.nvim_win_close, state.prev_win, true)
+    end
+    if vim.api.nvim_win_is_valid(state.orig_win) then
+      pcall(vim.api.nvim_set_current_win, state.orig_win)
+      if vim.api.nvim_buf_is_valid(state.orig_buf) then
+        pcall(vim.api.nvim_win_set_buf, state.orig_win, state.orig_buf)
+        pcall(vim.fn.winrestview, state.orig_view)
+      end
+    end
+  end
+
+  local function render_list()
+    local header = {
+      ("Fuzzy: scope=all(except Archive)  pool=%d  results=%d  query=%s"):format(
+        state.pool_limit,
+        state.limit_results,
+        (state.query ~= "" and state.query or "(set with /)")
+      ),
+      "------------------------------------------------------------",
+      "j/k or arrows = move   Enter = open   / = set query   r = refresh pool   Esc/q = quit",
+      "",
+    }
+
+    local lines = {}
+    for _, h in ipairs(header) do lines[#lines + 1] = h end
+
+    if #state.items == 0 then
+      lines[#lines + 1] = (state.query == "") and "Set a query with /" or "No matches."
+    else
+      for i, it in ipairs(state.items) do
+        local marker = (i == state.idx) and ">" or " "
+        local label = ("%s %3d) %s  (score=%d)"):format(marker, i, it.name, it.score)
+        lines[#lines + 1] = label
+      end
+    end
+
+    set_buf_lines(state.list_buf, lines)
+    local row = 4 + math.max(state.idx, 1)
+    pcall(vim.api.nvim_win_set_cursor, state.list_win, { row, 0 })
+  end
+
+  local function render_preview()
+    if not (state.prev_buf and vim.api.nvim_buf_is_valid(state.prev_buf)) then return end
+    if #state.items == 0 then
+      set_buf_lines(state.prev_buf, { "No preview." })
+      return
+    end
+    local it = state.items[state.idx]
+    if not it or it.path == "" then
+      set_buf_lines(state.prev_buf, { "No preview." })
+      return
+    end
+
+    local ok, file_lines = pcall(vim.fn.readfile, it.path)
+    if not ok or not file_lines then
+      set_buf_lines(state.prev_buf, { it.path, "------------------------------------------------------------", "(Could not read file)" })
+      return
+    end
+
+    -- try to find best line match for query (simple substring on normalized)
+    local qn = norm(state.query)
+    local best_i, best_pos = 1, 999999
+    if qn ~= "" then
+      for i = 1, math.min(#file_lines, 400) do
+        local ln = norm(file_lines[i])
+        local pos = ln:find(qn, 1, true)
+        if pos and pos < best_pos then
+          best_pos = pos
+          best_i = i
+        end
+      end
+    end
+
+    local lnum = math.max(1, best_i)
+    local start = math.max(1, lnum - 8)
+    local stop = math.min(#file_lines, lnum + 8)
+
+    local lines = {
+      it.path,
+      ("Best match line: %d"):format(lnum),
+      "------------------------------------------------------------",
+    }
+
+    for i = start, stop do
+      local prefix = (i == lnum) and ">>" or "  "
+      local num = ("%4d"):format(i)
+      lines[#lines + 1] = ("%s %s  %s"):format(prefix, num, file_lines[i])
+    end
+
+    set_buf_lines(state.prev_buf, lines)
+  end
+
+  local function compute_results()
+    if state.query == "" then
+      state.items = {}
+      state.idx = 1
+      return
+    end
+
+    if not state.pool then
+      state.pool = ps_recent_pool_no_archive(state.pool_limit)
+    end
+
+    local scored = {}
+    for _, path in ipairs(state.pool) do
+      -- score against filename + yaml title + content chunk
+      local blob = ""
+      local ok = pcall(function()
+        blob = file_snippet_for_fuzzy(path)
+      end)
+
+      local score
+      if ok then
+        -- file_snippet_for_fuzzy returns (blob, lines) but we only need blob here
+        if type(blob) == "table" then
+          -- safety: if something odd happened
+          blob = basename(path)
+        end
+        score = fuzzy_score(state.query, blob)
+      else
+        score = fuzzy_score(state.query, basename(path))
+      end
+
+      if score and score > 0 then
+        scored[#scored + 1] = { path = path, name = basename(path), score = score }
+      end
+    end
+
+    table.sort(scored, function(a, b)
+      if a.score == b.score then return a.name < b.name end
+      return a.score > b.score
+    end)
+
+    local top = {}
+    for i = 1, math.min(#scored, state.limit_results) do
+      top[#top + 1] = scored[i]
+    end
+    state.items = top
+    state.idx = (#state.items == 0) and 1 or math.max(1, math.min(state.idx, #state.items))
+  end
+
+  local function refresh()
+    compute_results()
+    render_list()
+    render_preview()
+  end
+
+  local function move(delta)
+    if #state.items == 0 then return end
+    state.idx = math.max(1, math.min(#state.items, state.idx + delta))
+    render_list()
+    render_preview()
+  end
+
+  local function open_selected()
+    if #state.items == 0 then return end
+    local it = state.items[state.idx]
+    if not it or it.path == "" then return end
+
+    local p = vim.fn.fnamemodify(it.path, ":p")
+
+    if state.prev_win and vim.api.nvim_win_is_valid(state.prev_win) then
+      pcall(vim.api.nvim_win_close, state.prev_win, true)
+      state.prev_win = nil
+    end
+
+    vim.api.nvim_set_current_win(state.list_win)
+    vim.cmd({ cmd = "edit", args = { p } })
+  end
+
+  local function quit()
+    cleanup()
+  end
+
+  local ok, err = pcall(function()
+    if vim.api.nvim_buf_get_name(0) == "" and vim.bo.buftype == "" then
+      vim.cmd("enew")
+    end
+
+    state.list_buf = buf_scratch("ZetFuzzy")
+    vim.api.nvim_win_set_buf(state.list_win, state.list_buf)
+
+    vim.cmd("vsplit")
+    state.prev_win = vim.api.nvim_get_current_win()
+    state.prev_buf = buf_scratch("ZetFuzzyPreview")
+    vim.api.nvim_win_set_buf(state.prev_win, state.prev_buf)
+
+    vim.cmd("wincmd h")
+    state.list_win = vim.api.nvim_get_current_win()
+
+    vim.wo[state.list_win].number = false
+    vim.wo[state.list_win].relativenumber = false
+    vim.wo[state.list_win].cursorline = true
+
+    vim.wo[state.prev_win].number = false
+    vim.wo[state.prev_win].relativenumber = false
+    vim.wo[state.prev_win].wrap = false
+
+    local mapopts = { buffer = state.list_buf, nowait = true, silent = true }
+
+    vim.keymap.set("n", "j", function() move(1) end, mapopts)
+    vim.keymap.set("n", "k", function() move(-1) end, mapopts)
+    vim.keymap.set("n", "<Down>", function() move(1) end, mapopts)
+    vim.keymap.set("n", "<Up>", function() move(-1) end, mapopts)
+
+    vim.keymap.set("n", "<CR>", open_selected, mapopts)
+    vim.keymap.set("n", "<Esc>", quit, mapopts)
+    vim.keymap.set("n", "q", quit, mapopts)
+
+    -- refresh pool (rebuild candidate list)
+    vim.keymap.set("n", "r", function()
+      state.pool = nil
+      refresh()
+    end, mapopts)
+
+    -- set query (like your other pickers)
+    vim.keymap.set("n", "/", function()
+      local newq = vim.fn.input("Fuzzy query (blank clears): ", state.query)
+      if newq == nil then return end
+      state.query = newq
+      state.idx = 1
+      refresh()
+    end, mapopts)
+
+    refresh()
+  end)
+
+  if not ok then
+    cleanup()
+    vim.notify("Fuzzy picker error: " .. tostring(err), vim.log.levels.ERROR)
   end
 end
 
@@ -851,7 +1278,7 @@ vim.keymap.set("n", "<leader>fp", function() open_picker("projects") end, { desc
 vim.keymap.set("n", "<leader>fs", function() open_picker("syncs") end,    { desc = "Find: syncs (preview)" })
 vim.keymap.set("n", "<leader>fr", function() open_picker("recent") end,   { desc = "Find: recent (all, preview)" })
 
--- Action items (find/query)
+-- Action items
 vim.keymap.set("n", "<leader>fa", function()
   open_actions_picker({ mode = "open" })
 end, { desc = "Find: open action items (all)" })
@@ -864,3 +1291,6 @@ end, { desc = "Find: open action items by @person" })
 vim.keymap.set("n", "<leader>fx", function()
   open_actions_picker({ mode = "done" })
 end, { desc = "Find: done action items" })
+
+-- Fuzzy search (content-aware)
+vim.keymap.set("n", "<leader>fg", open_fuzzy_picker, { desc = "Find: fuzzy search (content, preview)" })
