@@ -2,14 +2,8 @@
 -- init.lua (plugin-free Zet workflow on Windows)
 --  - <leader>z... = capture/actions (PowerShell scripts)
 --  - <leader>f... = find/pickers (preview, current tab)
---  - <leader>fg   = fuzzy search (content + filename) via rg
+--  - <leader>fg   = fuzzy search (content + filename) via rg (fixed)
 --  - Action Items: [ ] @person ... (open)   [x] @person ... (done)
---
--- Requirements:
---   - pwsh in PATH
---   - rg in PATH
---   - C:\ZetScripts\zet.config.ps1 defines $ZetRoot
---   - C:\ZetScripts\zet-new.ps1, zet-process.ps1, zet-archive.ps1 exist
 -- ============================================================
 
 ------------------------------------------------------------
@@ -19,7 +13,7 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
 ------------------------------------------------------------
--- Theme (no plugin assumed; uses colorscheme already available)
+-- Theme
 ------------------------------------------------------------
 vim.opt.termguicolors = true
 pcall(vim.cmd.colorscheme, "tokyonight-lite")
@@ -111,7 +105,6 @@ vim.keymap.set("v", "<", "<gv", { desc = "Indent left + reselect" })
 vim.keymap.set("v", ">", ">gv", { desc = "Indent right + reselect" })
 
 vim.keymap.set("n", "J", "mzJ`z", { desc = "Join lines keep cursor" })
-
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
 
 local highlight_yank_group = vim.api.nvim_create_augroup("HighlightYank", {})
@@ -261,8 +254,7 @@ local function zet_process_menu()
       "-To", choice.to,
     }
     if new_title and new_title ~= "" then
-      table.insert(cmd, "-Title")
-      table.insert(cmd, new_title)
+      table.insert(cmd, "-Title"); table.insert(cmd, new_title)
     end
 
     local out = ps_systemlist(cmd)
@@ -282,7 +274,7 @@ local function zet_process_menu()
 end
 
 -- ============================================================
--- UI Helpers (scratch buffers + preview split)
+-- UI helpers (scratch buffers + preview split)
 -- ============================================================
 local function buf_scratch(name)
   local b = vim.api.nvim_create_buf(false, true)
@@ -305,79 +297,86 @@ local function basename(p)
 end
 
 -- ============================================================
--- Ripgrep runner (SAFE with spaces): never shell-joins paths
+-- Ripgrep runner (SAFE with spaces): list args only, no shell join
 -- ============================================================
+local function rg_bin()
+  local p = vim.fn.exepath("rg")
+  if p == nil or p == "" then return "rg" end
+  return p
+end
+
+local function ensure_rg()
+  if vim.fn.executable("rg") ~= 1 then
+    vim.notify("Zet: rg not found in Neovim PATH. Restart Neovim or add rg to PATH visible to nvim.", vim.log.levels.ERROR)
+    return false
+  end
+  return true
+end
+
 local function rg_systemlist(args)
-  -- args is a list: {"rg", "--vimgrep", "pattern", "--", "C:\\path with spaces", ...}
+  if not ensure_rg() then return {} end
+  args[1] = rg_bin()
   local out = vim.fn.systemlist(args)
+  if vim.v.shell_error ~= 0 then
+    vim.notify("rg failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+  end
   return out
 end
 
 local function rg_parse_vimgrep(lines)
-  -- rg --vimgrep output: path:line:col:text
   local hits = {}
   for _, line in ipairs(lines) do
     line = (line or ""):gsub("\r", "")
     local p, l, c, t = line:match("^(.-):(%d+):(%d+):(.*)$")
     if p and l and t then
-      hits[#hits + 1] = {
-        path = p,
-        lnum = tonumber(l),
-        col = tonumber(c) or 1,
-        text = t,
-      }
+      hits[#hits + 1] = { path = p, lnum = tonumber(l), col = tonumber(c) or 1, text = t }
     end
   end
   return hits
 end
 
 -- ============================================================
--- Generic Picker (list + preview split), re-usable
+-- Generic list+preview picker (buffer-local mappings, current tab)
 -- ============================================================
-local function open_list_picker(opts)
-  -- opts:
-  --   title(): string
-  --   build_items(): { {label=..., path=..., lnum?=... , extra?=...}, ... }
-  --   preview(item): {lines...}
-  --   on_open(item): open behavior
+local function open_list_picker(make_state)
   local orig_win = vim.api.nvim_get_current_win()
   local orig_buf = vim.api.nvim_get_current_buf()
   local orig_view = vim.fn.winsaveview()
 
-  local state = {
-    idx = 1,
-    items = {},
-    find = "",
-    list_win = orig_win,
-    list_buf = nil,
-    prev_win = nil,
-    prev_buf = nil,
-    orig_win = orig_win,
-    orig_buf = orig_buf,
-    orig_view = orig_view,
-  }
+  local state = make_state()
+  state.idx = 1
+  state.find = state.find or ""
 
   local function cleanup()
     if state.prev_win and vim.api.nvim_win_is_valid(state.prev_win) then
       pcall(vim.api.nvim_win_close, state.prev_win, true)
     end
-    if vim.api.nvim_win_is_valid(state.orig_win) then
-      pcall(vim.api.nvim_set_current_win, state.orig_win)
-      if vim.api.nvim_buf_is_valid(state.orig_buf) then
-        pcall(vim.api.nvim_win_set_buf, state.orig_win, state.orig_buf)
-        pcall(vim.fn.winrestview, state.orig_view)
+    if vim.api.nvim_win_is_valid(orig_win) then
+      pcall(vim.api.nvim_set_current_win, orig_win)
+      if vim.api.nvim_buf_is_valid(orig_buf) then
+        pcall(vim.api.nvim_win_set_buf, orig_win, orig_buf)
+        pcall(vim.fn.winrestview, orig_view)
       end
     end
   end
 
+  local function apply_filter(items)
+    if state.find == "" then return items end
+    local f = state.find:lower()
+    local out = {}
+    for _, it in ipairs(items) do
+      if (it.label or ""):lower():find(f, 1, true) then out[#out + 1] = it end
+    end
+    return out
+  end
+
   local function render_list()
     local header = {
-      opts.title(state),
+      state.title(),
       "------------------------------------------------------------",
-      "j/k = move   Enter = open   / = filter   r = refresh   Esc/q = quit",
+      state.help or "j/k move | Enter open | / filter | r refresh | Esc/q quit",
       "",
     }
-
     local lines = {}
     for _, h in ipairs(header) do lines[#lines + 1] = h end
 
@@ -396,30 +395,17 @@ local function open_list_picker(opts)
   end
 
   local function render_preview()
-    if not (state.prev_buf and vim.api.nvim_buf_is_valid(state.prev_buf)) then return end
+    if not state.prev_buf or not vim.api.nvim_buf_is_valid(state.prev_buf) then return end
     if #state.items == 0 then
       set_buf_lines(state.prev_buf, { "No preview." })
       return
     end
     local it = state.items[state.idx]
-    local lines = opts.preview(it, state)
-    set_buf_lines(state.prev_buf, lines or { "No preview." })
-  end
-
-  local function apply_filter(items)
-    if state.find == "" then return items end
-    local f = state.find:lower()
-    local out = {}
-    for _, it in ipairs(items) do
-      if (it.label or ""):lower():find(f, 1, true) then
-        out[#out + 1] = it
-      end
-    end
-    return out
+    set_buf_lines(state.prev_buf, state.preview(it) or { "No preview." })
   end
 
   local function refresh()
-    local items = opts.build_items(state) or {}
+    local items = state.build_items() or {}
     state.items = apply_filter(items)
     state.idx = (#state.items == 0) and 1 or math.max(1, math.min(state.idx, #state.items))
     render_list()
@@ -440,24 +426,19 @@ local function open_list_picker(opts)
       pcall(vim.api.nvim_win_close, state.prev_win, true)
       state.prev_win = nil
     end
-    opts.on_open(it, state)
-  end
-
-  local function quit()
-    cleanup()
+    state.on_open(it)
   end
 
   local ok, err = pcall(function()
-    if vim.api.nvim_buf_get_name(0) == "" and vim.bo.buftype == "" then
-      vim.cmd("enew")
-    end
+    if vim.api.nvim_buf_get_name(0) == "" and vim.bo.buftype == "" then vim.cmd("enew") end
 
-    state.list_buf = buf_scratch("ZetList")
+    state.list_win = vim.api.nvim_get_current_win()
+    state.list_buf = buf_scratch(state.bufname or "ZetList")
     vim.api.nvim_win_set_buf(state.list_win, state.list_buf)
 
     vim.cmd("vsplit")
     state.prev_win = vim.api.nvim_get_current_win()
-    state.prev_buf = buf_scratch("ZetPreview")
+    state.prev_buf = buf_scratch(state.prevname or "ZetPreview")
     vim.api.nvim_win_set_buf(state.prev_win, state.prev_buf)
 
     vim.cmd("wincmd h")
@@ -475,9 +456,11 @@ local function open_list_picker(opts)
     vim.keymap.set("n", "k", function() move(-1) end, mapopts)
     vim.keymap.set("n", "<Down>", function() move(1) end, mapopts)
     vim.keymap.set("n", "<Up>", function() move(-1) end, mapopts)
+
     vim.keymap.set("n", "<CR>", open_selected, mapopts)
-    vim.keymap.set("n", "<Esc>", quit, mapopts)
-    vim.keymap.set("n", "q", quit, mapopts)
+    vim.keymap.set("n", "<Esc>", cleanup, mapopts)
+    vim.keymap.set("n", "q", cleanup, mapopts)
+
     vim.keymap.set("n", "r", refresh, mapopts)
     vim.keymap.set("n", "/", function()
       local newf = vim.fn.input("Filter (blank clears): ", state.find)
@@ -486,6 +469,9 @@ local function open_list_picker(opts)
       state.idx = 1
       refresh()
     end, mapopts)
+
+    -- optional extra keymaps from caller (buffer-local)
+    if state.install_keymaps then state.install_keymaps(state.list_buf, refresh) end
 
     refresh()
   end)
@@ -497,98 +483,7 @@ local function open_list_picker(opts)
 end
 
 -- ============================================================
--- File pickers (keep PS list for “recent” ordering; preview by file head)
--- ============================================================
-local function ps_list(kind, limit)
-  local root = Zet.root()
-  if root == "" then return {} end
-
-  local folders = {
-    inbox = "Inbox",
-    meetings = "Meetings",
-    notes = "Notes",
-    projects = "Projects",
-    syncs = "Syncs",
-    archive = "Archive",
-  }
-
-  local kinds = {}
-  if kind == "recent" then
-    kinds = { "inbox", "meetings", "notes", "projects", "syncs", "archive" }
-  else
-    kinds = { kind }
-  end
-
-  local specs = {}
-  for _, k in ipairs(kinds) do
-    local d = root .. "\\" .. folders[k]
-    specs[#specs + 1] = ("@{Kind='%s'; Dir='%s'}"):format(k, d:gsub("'", "''"))
-  end
-
-  local ps = ([[
-    $specs = @(
-      %s
-    )
-    $items = foreach ($s in $specs) {
-      if (Test-Path -LiteralPath $s.Dir) {
-        Get-ChildItem -LiteralPath $s.Dir -File -Filter *.md |
-          ForEach-Object {
-            [pscustomobject]@{ Kind=$s.Kind; Path=$_.FullName; Time=$_.LastWriteTimeUtc }
-          }
-      }
-    }
-    $items |
-      Sort-Object Time -Descending |
-      Select-Object -First %d |
-      ForEach-Object { "$($_.Kind)|$($_.Path)" }
-  ]]):format(table.concat(specs, ",\n      "), limit)
-
-  local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
-  local items = {}
-  for _, line in ipairs(out) do
-    line = (line or ""):gsub("\r", "")
-    local k, p = line:match("^([^|]+)|(.+)$")
-    if k and p then items[#items + 1] = { kind = k, path = p, name = basename(p) } end
-  end
-  return items
-end
-
-local function open_file_picker(kind)
-  open_list_picker({
-    title = function(state)
-      return ("Zet Find: %s  limit=%d  filter=%s"):format(kind, 120, (state.find ~= "" and state.find or "(none)"))
-    end,
-    build_items = function(_)
-      local list = ps_list(kind, 120)
-      local out = {}
-      for _, it in ipairs(list) do
-        out[#out + 1] = {
-          label = ("[%-8s] %s"):format(it.kind, it.name),
-          path = it.path,
-        }
-      end
-      return out
-    end,
-    preview = function(item)
-      local p = item.path
-      local ok, lines = pcall(vim.fn.readfile, p)
-      if not ok or not lines then
-        return { p, "------------------------------------------------------------", "(Could not read file)" }
-      end
-      local out = { p, "------------------------------------------------------------" }
-      local max = math.min(#lines, 120)
-      for i = 1, max do out[#out + 1] = lines[i] end
-      if #lines > max then out[#out + 1] = "…" end
-      return out
-    end,
-    on_open = function(item)
-      vim.cmd({ cmd = "edit", args = { vim.fn.fnamemodify(item.path, ":p") } })
-    end,
-  })
-end
-
--- ============================================================
--- Action items picker powered by rg (fast)
+-- Action items (rg) - FIXED patterns to allow list markers/indent
 -- ============================================================
 local function rg_action_hits(mode, person)
   local root = Zet.root()
@@ -602,9 +497,14 @@ local function rg_action_hits(mode, person)
     root .. "\\Syncs",
   }
 
-  local pat_open = [[^\[\s\]\s+.*]]
-  local pat_done = [[^\[(?:x|X)\]\s+.*]]
-  local pat_all  = [[^\[(?:\s|x|X)\]\s+.*]]
+  -- Accept:
+  --   [ ] ...
+  --   - [ ] ...
+  --   * [ ] ...
+  --   leading spaces
+  local pat_open = [[^\s*(?:[-*]\s+)?\[\s\]\s+.*]]
+  local pat_done = [[^\s*(?:[-*]\s+)?\[(?:x|X)\]\s+.*]]
+  local pat_all  = [[^\s*(?:[-*]\s+)?\[(?:\s|x|X)\]\s+.*]]
 
   local pat = pat_open
   if mode == "done" then pat = pat_done end
@@ -620,9 +520,7 @@ local function rg_action_hits(mode, person)
     local needle = "@" .. person:lower()
     local filtered = {}
     for _, h in ipairs(hits) do
-      if (h.text or ""):lower():find(needle, 1, true) then
-        filtered[#filtered + 1] = h
-      end
+      if (h.text or ""):lower():find(needle, 1, true) then filtered[#filtered + 1] = h end
     end
     hits = filtered
   end
@@ -631,60 +529,59 @@ local function rg_action_hits(mode, person)
 end
 
 local function open_actions_picker(mode, person)
-  open_list_picker({
-    title = function(state)
-      local who = (person and person ~= "") and (" @" .. person) or ""
-      return ("Action Items (%s%s)  filter=%s"):format(mode, who, (state.find ~= "" and state.find or "(none)"))
-    end,
-    build_items = function()
-      local hits = rg_action_hits(mode, person)
-      local items = {}
-      for _, h in ipairs(hits) do
-        local short = (h.text or ""):gsub("%s+", " ")
-        if #short > 120 then short = short:sub(1, 120) .. "…" end
-        items[#items + 1] = {
-          label = ("%s  [%s:%d]"):format(short, basename(h.path), h.lnum),
-          path = h.path,
-          lnum = h.lnum,
-        }
-      end
-      return items
-    end,
-    preview = function(item)
-      local ok, lines = pcall(vim.fn.readfile, item.path)
-      if not ok or not lines then
-        return { item.path, "------------------------------------------------------------", "(Could not read file)" }
-      end
-      local lnum = math.max(1, item.lnum or 1)
-      local start = math.max(1, lnum - 6)
-      local stop = math.min(#lines, lnum + 6)
+  open_list_picker(function()
+    return {
+      bufname = "ZetActions",
+      prevname = "ZetActionsPreview",
+      help = "j/k move | Enter open@line | / filter labels | r refresh | Esc quit",
+      title = function()
+        local who = (person and person ~= "") and (" @" .. person) or ""
+        return ("Action Items (%s%s)  filter=%s"):format(mode, who, (vim.b._zet_find or "(none)"))
+      end,
+      build_items = function()
+        local hits = rg_action_hits(mode, person)
+        local items = {}
+        for _, h in ipairs(hits) do
+          local short = (h.text or ""):gsub("%s+", " ")
+          if #short > 140 then short = short:sub(1, 140) .. "…" end
+          items[#items + 1] = {
+            label = ("%s  [%s:%d]"):format(short, basename(h.path), h.lnum),
+            path = h.path,
+            lnum = h.lnum,
+          }
+        end
+        return items
+      end,
+      preview = function(item)
+        local ok, lines = pcall(vim.fn.readfile, item.path)
+        if not ok or not lines then
+          return { item.path, "------------------------------------------------------------", "(Could not read file)" }
+        end
+        local lnum = math.max(1, item.lnum or 1)
+        local start = math.max(1, lnum - 6)
+        local stop = math.min(#lines, lnum + 6)
 
-      local out = { item.path, ("Line %d"):format(lnum), "------------------------------------------------------------" }
-      for i = start, stop do
-        local prefix = (i == lnum) and ">>" or "  "
-        out[#out + 1] = ("%s %4d  %s"):format(prefix, i, lines[i])
-      end
-      return out
-    end,
-    on_open = function(item)
-      vim.cmd({ cmd = "edit", args = { vim.fn.fnamemodify(item.path, ":p") } })
-      pcall(vim.api.nvim_win_set_cursor, 0, { item.lnum or 1, 0 })
-      vim.cmd("normal! zz")
-    end,
-  })
+        local out = { item.path, ("Line %d"):format(lnum), "------------------------------------------------------------" }
+        for i = start, stop do
+          local prefix = (i == lnum) and ">>" or "  "
+          out[#out + 1] = ("%s %4d  %s"):format(prefix, i, lines[i])
+        end
+        return out
+      end,
+      on_open = function(item)
+        vim.cmd({ cmd = "edit", args = { vim.fn.fnamemodify(item.path, ":p") } })
+        pcall(vim.api.nvim_win_set_cursor, 0, { item.lnum or 1, 0 })
+        vim.cmd("normal! zz")
+      end,
+    }
+  end)
 end
 
 -- ============================================================
--- <leader>fg: fuzzy search contents + filename (rg-assisted)
---
--- Behavior:
---   - Open picker (same UI)
---   - Press "/" to set query
---   - We use rg to get content hits quickly (across folders except Archive)
---   - ALSO include filename matches from rg --files (then fuzzy-score)
---   - Return top 25 results by fuzzy score
+-- Fuzzy search (rg-assisted) - FIXED (real picker)
+--   - searches contents AND filename
+--   - / sets query
 -- ============================================================
-
 local function norm(s)
   s = (s or ""):lower()
   s = s:gsub("[^%w%s#@%-_./]", " ")
@@ -748,14 +645,6 @@ local function fuzzy_score(query, hay)
   return score
 end
 
-local function rg_content_hits(query, dirs)
-  if query == "" then return {} end
-  local args = { "rg", "--vimgrep", "--no-heading", "--color", "never", "--smart-case", query, "--" }
-  for _, d in ipairs(dirs) do args[#args + 1] = d end
-  local out = rg_systemlist(args)
-  return rg_parse_vimgrep(out)
-end
-
 local function rg_list_files(dirs)
   local args = { "rg", "--files", "--" }
   for _, d in ipairs(dirs) do args[#args + 1] = d end
@@ -766,6 +655,14 @@ local function rg_list_files(dirs)
     if line ~= "" and line:match("%.md$") then files[#files + 1] = line end
   end
   return files
+end
+
+local function rg_content_hits(query, dirs)
+  if query == "" then return {} end
+  local args = { "rg", "--vimgrep", "--no-heading", "--color", "never", "--smart-case", query, "--" }
+  for _, d in ipairs(dirs) do args[#args + 1] = d end
+  local out = rg_systemlist(args)
+  return rg_parse_vimgrep(out)
 end
 
 local function open_fuzzy_picker()
@@ -780,146 +677,117 @@ local function open_fuzzy_picker()
     root .. "\\Syncs",
   }
 
-  local state_extra = {
+  local fuzzy = {
     query = "",
-    results = 25,
-    file_pool = nil, -- cached rg --files
+    topn = 25,
+    file_pool = nil,
   }
 
-  open_list_picker({
-    title = function(state)
-      return ("Fuzzy (rg): contents + filename | top=%d | query=%s | filter=%s"):format(
-        state_extra.results,
-        (state_extra.query ~= "" and state_extra.query or "(set with /)"),
-        (state.find ~= "" and state.find or "(none)")
-      )
-    end,
+  open_list_picker(function()
+    return {
+      bufname = "ZetFuzzy",
+      prevname = "ZetFuzzyPreview",
+      help = "j/k move | Enter open | /=set query | r refresh | Esc quit",
+      title = function()
+        return ("Fuzzy (rg): contents+filename | top=%d | query=%s"):format(
+          fuzzy.topn,
+          (fuzzy.query ~= "" and fuzzy.query or "(set with =)")
+        )
+      end,
 
-    build_items = function(state)
-      -- Use the "/" filter for display-only narrowing; the actual search query is state_extra.query.
-      -- We'll still allow "/" to set the query via overriding the "/" key in the picker buffer below.
-      local q = state_extra.query
-      if q == "" then return {} end
+      -- Build list from fuzzy.query
+      build_items = function()
+        if fuzzy.query == "" then return {} end
+        if not fuzzy.file_pool then fuzzy.file_pool = rg_list_files(dirs) end
 
-      -- 1) content hits via rg
-      local hits = rg_content_hits(q, dirs)
-
-      -- Unique by path, keep best (closest) line number as preview anchor
-      local by_path = {}
-      for _, h in ipairs(hits) do
-        local cur = by_path[h.path]
-        if not cur then
-          by_path[h.path] = { path = h.path, lnum = h.lnum, sample = h.text }
-        else
-          -- keep earliest hit line as a stable anchor
-          if h.lnum < (cur.lnum or 999999) then
-            cur.lnum = h.lnum
-            cur.sample = h.text
+        -- Content hits (unique by file)
+        local hits = rg_content_hits(fuzzy.query, dirs)
+        local by_path = {}
+        for _, h in ipairs(hits) do
+          local cur = by_path[h.path]
+          if not cur or h.lnum < cur.lnum then
+            by_path[h.path] = { path = h.path, lnum = h.lnum, sample = h.text }
           end
         end
-      end
 
-      -- 2) filename matches (rg --files cached) + fuzzy score against basename
-      if not state_extra.file_pool then
-        state_extra.file_pool = rg_list_files(dirs)
-      end
+        local scored = {}
+        local seen = {}
 
-      local scored = {}
-
-      -- a) score content-hit files higher (use filename + hit text)
-      for _, v in pairs(by_path) do
-        local label_blob = basename(v.path) .. "\n" .. (v.sample or "")
-        local score = fuzzy_score(q, label_blob)
-        if score > 0 then
-          scored[#scored + 1] = { path = v.path, lnum = v.lnum, score = score + 40, sample = v.sample } -- +40 bias for actual content hit
-        end
-      end
-
-      -- b) add filename-only matches (no content hit), scored by basename/path
-      local seen = {}
-      for _, s in ipairs(scored) do seen[s.path] = true end
-
-      for _, p in ipairs(state_extra.file_pool) do
-        if not seen[p] then
-          local b = basename(p)
-          local score = fuzzy_score(q, b)
-          if score > 0 then
-            scored[#scored + 1] = { path = p, lnum = 1, score = score, sample = "" }
+        for _, v in pairs(by_path) do
+          local blob = basename(v.path) .. "\n" .. (v.sample or "")
+          local s = fuzzy_score(fuzzy.query, blob)
+          if s > 0 then
+            scored[#scored + 1] = { path = v.path, lnum = v.lnum, score = s + 40 }
+            seen[v.path] = true
           end
         end
-      end
 
-      table.sort(scored, function(a, b)
-        if a.score == b.score then return a.path < b.path end
-        return a.score > b.score
-      end)
+        for _, p in ipairs(fuzzy.file_pool) do
+          if not seen[p] then
+            local s = fuzzy_score(fuzzy.query, basename(p))
+            if s > 0 then
+              scored[#scored + 1] = { path = p, lnum = 1, score = s }
+            end
+          end
+        end
 
-      local items = {}
-      for i = 1, math.min(#scored, state_extra.results) do
-        local it = scored[i]
-        items[#items + 1] = {
-          label = ("%s  (score=%d)"):format(basename(it.path), it.score),
-          path = it.path,
-          lnum = it.lnum,
-        }
-      end
+        table.sort(scored, function(a, b)
+          if a.score == b.score then return a.path < b.path end
+          return a.score > b.score
+        end)
 
-      return items
-    end,
+        local items = {}
+        for i = 1, math.min(#scored, fuzzy.topn) do
+          local it = scored[i]
+          items[#items + 1] = {
+            label = ("%s  (score=%d)"):format(basename(it.path), it.score),
+            path = it.path,
+            lnum = it.lnum,
+          }
+        end
+        return items
+      end,
 
-    preview = function(item)
-      local ok, lines = pcall(vim.fn.readfile, item.path)
-      if not ok or not lines then
-        return { item.path, "------------------------------------------------------------", "(Could not read file)" }
-      end
+      preview = function(item)
+        local ok, lines = pcall(vim.fn.readfile, item.path)
+        if not ok or not lines then
+          return { item.path, "------------------------------------------------------------", "(Could not read file)" }
+        end
+        local lnum = math.max(1, item.lnum or 1)
+        local start = math.max(1, lnum - 8)
+        local stop = math.min(#lines, lnum + 8)
+        local out = { item.path, ("Anchor line: %d"):format(lnum), "------------------------------------------------------------" }
+        for i = start, stop do
+          local prefix = (i == lnum) and ">>" or "  "
+          out[#out + 1] = ("%s %4d  %s"):format(prefix, i, lines[i])
+        end
+        return out
+      end,
 
-      local lnum = math.max(1, item.lnum or 1)
-      local start = math.max(1, lnum - 8)
-      local stop = math.min(#lines, lnum + 8)
+      on_open = function(item)
+        vim.cmd({ cmd = "edit", args = { vim.fn.fnamemodify(item.path, ":p") } })
+        if item.lnum and item.lnum > 1 then
+          pcall(vim.api.nvim_win_set_cursor, 0, { item.lnum, 0 })
+          vim.cmd("normal! zz")
+        end
+      end,
 
-      local out = {
-        item.path,
-        ("Anchor line: %d"):format(lnum),
-        "------------------------------------------------------------",
-      }
-      for i = start, stop do
-        local prefix = (i == lnum) and ">>" or "  "
-        out[#out + 1] = ("%s %4d  %s"):format(prefix, i, lines[i])
-      end
-      return out
-    end,
+      -- Add buffer-local mapping: "=" sets fuzzy query (so "/" remains label filter if you want it)
+      install_keymaps = function(buf, refresh)
+        vim.keymap.set("n", "=", function()
+          local newq = vim.fn.input("Fuzzy query (blank clears): ", fuzzy.query)
+          if newq == nil then return end
+          fuzzy.query = newq
+          refresh()
+        end, { buffer = buf, nowait = true, silent = true })
 
-    on_open = function(item)
-      vim.cmd({ cmd = "edit", args = { vim.fn.fnamemodify(item.path, ":p") } })
-      if item.lnum and item.lnum > 1 then
-        pcall(vim.api.nvim_win_set_cursor, 0, { item.lnum, 0 })
-        vim.cmd("normal! zz")
-      end
-    end,
-  })
-
-  -- Override "/" in the picker buffer to set the *search query* (not just label filter).
-  -- We can’t directly reference that list buffer from here cleanly, so we map globally:
-  -- If you prefer buffer-local only, tell me and I’ll refactor open_list_picker to expose state.
-  vim.defer_fn(function()
-    -- If the current buffer is our picker scratch, install a buffer-local map.
-    local b = vim.api.nvim_get_current_buf()
-    local name = vim.api.nvim_buf_get_name(b)
-    if name:find("ZetList", 1, true) then
-      vim.keymap.set("n", "/", function()
-        local newq = vim.fn.input("Fuzzy query (blank clears): ", state_extra.query)
-        if newq == nil then return end
-        state_extra.query = newq
-        -- refresh by triggering 'r' mapping: easiest is to call :normal r
-        vim.cmd("normal! r")
-      end, { buffer = b, nowait = true, silent = true })
-      vim.keymap.set("n", "r", function()
-        -- rebuild file pool and refresh
-        state_extra.file_pool = nil
-        vim.cmd("normal! r") -- will be intercepted by picker buffer mapping; if not, harmless
-      end, { buffer = b, nowait = true, silent = true })
-    end
-  end, 10)
+        vim.keymap.set("n", "r", function()
+          fuzzy.file_pool = nil
+          refresh()
+        end, { buffer = buf, nowait = true, silent = true })
+      end,
+    }
+  end)
 end
 
 -- ============================================================
@@ -934,15 +802,10 @@ vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive cu
 vim.keymap.set("n", "<leader>zx", zet_process_menu,    { desc = "Zet: process current (menu)" })
 
 -- ============================================================
--- Keymaps: <leader>f = find/pickers (preview)
+-- Keymaps: <leader>f = find/pickers
+--   fa/fA/fx use rg (fixed)
+--   fg uses rg fuzzy picker (fixed)
 -- ============================================================
-vim.keymap.set("n", "<leader>fi", function() open_file_picker("inbox") end,    { desc = "Find: inbox (preview)" })
-vim.keymap.set("n", "<leader>fm", function() open_file_picker("meetings") end, { desc = "Find: meetings (preview)" })
-vim.keymap.set("n", "<leader>fn", function() open_file_picker("notes") end,    { desc = "Find: notes (preview)" })
-vim.keymap.set("n", "<leader>fp", function() open_file_picker("projects") end, { desc = "Find: projects (preview)" })
-vim.keymap.set("n", "<leader>fs", function() open_file_picker("syncs") end,    { desc = "Find: syncs (preview)" })
-vim.keymap.set("n", "<leader>fr", function() open_file_picker("recent") end,   { desc = "Find: recent (all, preview)" })
-
 vim.keymap.set("n", "<leader>fa", function() open_actions_picker("open", nil) end, { desc = "Find: open action items (all)" })
 vim.keymap.set("n", "<leader>fA", function()
   local who = vim.fn.input("@person (blank = no filter): ")
