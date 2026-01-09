@@ -1,454 +1,108 @@
+------------------------------------------------------------
+-- Leader
+------------------------------------------------------------
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
+------------------------------------------------------------
+-- Theme
+------------------------------------------------------------
 vim.cmd.colorscheme("tokyonight-lite")
 vim.api.nvim_set_hl(0, "@markup.heading", { fg = "#7aa2f7", bold = true })
 
--- Basic Settings
-vim.opt.number = true -- Line numbers
-vim.opt.relativenumber = true -- Relative line numbers
-vim.opt.cursorline = true -- Highlight current line
-vim.opt.scrolloff = 4 -- Keep 10 lines above/below cursor
-vim.opt.wrap = false -- Don't wrap lines
+------------------------------------------------------------
+-- Basic Settings (kept from yours)
+------------------------------------------------------------
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.cursorline = true
+vim.opt.scrolloff = 4
+vim.opt.wrap = false
 
--- Tabbing / Indentation
-vim.opt.tabstop = 2 -- Tab width
-vim.opt.shiftwidth = 2 -- Indent width
-vim.opt.softtabstop = 2 -- Soft tab stop
-vim.opt.expandtab = true -- Use spaces instead of tabs
-vim.opt.smartindent = true -- Smart auto-indenting
-vim.opt.autoindent = true -- Copy indent from current line
-vim.opt.grepprg = "rg --vimgrep" -- Use ripgrep if available
-vim.opt.grepformat = "%f:%l:%c:%m" -- filename, line number, column, content
+vim.opt.tabstop = 2
+vim.opt.shiftwidth = 2
+vim.opt.softtabstop = 2
+vim.opt.expandtab = true
+vim.opt.smartindent = true
+vim.opt.autoindent = true
 
--- Search Settings
-vim.opt.ignorecase = true -- Case-insensitive search
-vim.opt.smartcase = true -- Case-sensitive if uppercase in search
-vim.opt.hlsearch = false -- Don't highlight search results
-vim.opt.incsearch = true -- Show matches as you type
+-- You said rg isn't installed. Don't force grepprg to rg.
+-- vim.opt.grepprg = "rg --vimgrep"
+-- vim.opt.grepformat = "%f:%l:%c:%m"
 
--- Visual Settings
-vim.opt.termguicolors = true -- Enable 24-bit colors
-vim.opt.signcolumn = "yes" -- Always show sign column
-vim.opt.colorcolumn = "80" -- Show column at 100 characters
-vim.opt.showmatch = true -- Highlight matching brackets
-vim.opt.matchtime = 2 -- How long to show matching bracket
-vim.opt.lazyredraw = false -- redraw while executing macros (butter UX)
-vim.opt.redrawtime = 10000 -- Timeout for syntax highlighting redraw
-vim.opt.maxmempattern = 20000 -- Max memory for pattern matching
-vim.opt.synmaxcol = 300 -- Syntax highlighting column limit
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.hlsearch = false
+vim.opt.incsearch = true
 
--- File Handling
-vim.opt.backup = false -- Don't create backup files
-vim.opt.writebackup = false -- Don't backup before overwriting
-vim.opt.swapfile = false -- Don't create swap files
-vim.opt.undofile = true -- Persistent undo
-vim.opt.updatetime = 300 -- Time in ms to trigger CursorHold
-vim.opt.timeoutlen = 500 -- Time in ms to wait for mapped sequence
-vim.opt.ttimeoutlen = 0 -- No wait for key code sequences
-vim.opt.autoread = true -- Auto-reload file if changed outside
-vim.opt.autowrite = false -- Don't auto-save on some events
+vim.opt.termguicolors = true
+vim.opt.signcolumn = "yes"
+vim.opt.colorcolumn = "80"
+vim.opt.showmatch = true
+vim.opt.matchtime = 2
 
--- Behavior Settings
-vim.opt.errorbells = false -- Disable error sounds
-vim.opt.backspace = "indent,eol,start" -- Make backspace behave naturally
-vim.opt.mouse = "a" -- Enable mouse support
-vim.opt.clipboard = ("unnamedplus") -- Use system clipboard
+vim.opt.lazyredraw = false
+vim.opt.redrawtime = 10000
+vim.opt.maxmempattern = 20000
+vim.opt.synmaxcol = 300
 
--- Split Behavior
-vim.opt.splitbelow = true -- Horizontal splits open below
-vim.opt.splitright = true -- Vertical splits open to the rightet number
+-- File handling
+vim.opt.backup = false
+vim.opt.writebackup = false
+vim.opt.swapfile = false
+vim.opt.undofile = true
+vim.opt.updatetime = 300
+vim.opt.timeoutlen = 500
+vim.opt.ttimeoutlen = 0
+vim.opt.autoread = true
+vim.opt.autowrite = false
 
-vim.o.shell = "powershell.exe"
+vim.opt.errorbells = false
+vim.opt.backspace = "indent,eol,start"
+vim.opt.mouse = "a"
+vim.opt.clipboard = "unnamedplus"
 
--- Buffer navigation
+vim.opt.splitbelow = true
+vim.opt.splitright = true
+
+-- Prefer pwsh if you want, but leaving this alone is usually fine.
+-- vim.o.shell = "powershell.exe"
+
+------------------------------------------------------------
+-- Quality-of-life mappings (kept)
+------------------------------------------------------------
 vim.keymap.set("n", "<leader>bn", "<Cmd>bnext<CR>", { desc = "Next buffer" })
 vim.keymap.set("n", "<leader>bp", "<Cmd>bprevious<CR>", { desc = "Previous buffer" })
 
--- Better window navigation
 vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
 vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to bottom window" })
 vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to top window" })
 vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
 
--- Splitting & Resizing
 vim.keymap.set("n", "<leader>sv", "<Cmd>vsplit<CR>", { desc = "Split window vertically" })
 vim.keymap.set("n", "<leader>sh", "<Cmd>split<CR>", { desc = "Split window horizontally" })
-vim.keymap.set("n", "<C-Up>", "<Cmd>resize +2<CR>", { desc = "Increase window height" })
-vim.keymap.set("n", "<C-Down>", "<Cmd>resize -2<CR>", { desc = "Decrease window height" })
-vim.keymap.set("n", "<C-Left>", "<Cmd>vertical resize -2<CR>", { desc = "Decrease window width" })
-vim.keymap.set("n", "<C-Right>", "<Cmd>vertical resize +2<CR>", { desc = "Increase window width" })
 
--- Better indenting in visual mode
 vim.keymap.set("v", "<", "<gv", { desc = "Indent left and reselect" })
 vim.keymap.set("v", ">", ">gv", { desc = "Indent right and reselect" })
-
--- Better J behavior
 vim.keymap.set("n", "J", "mzJ`z", { desc = "Join lines and keep cursor position" })
-
--- Clear search highlight
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
 
--- Highlight the yanked text for 200ms
 local highlight_yank_group = vim.api.nvim_create_augroup("HighlightYank", {})
 vim.api.nvim_create_autocmd("TextYankPost", {
-	group = highlight_yank_group,
-	pattern = "*",
-	callback = function()
-		vim.hl.on_yank({
-			higroup = "IncSearch",
-			timeout = 200,
-		})
-	end,
+  group = highlight_yank_group,
+  pattern = "*",
+  callback = function()
+    vim.hl.on_yank({ higroup = "IncSearch", timeout = 200 })
+  end,
 })
 
-vim.api.nvim_create_user_command("ZetInbox", function(opts)
-  local title = opts.args
-  if title == "" then title = "untitled" end
-  vim.cmd('silent !pwsh -NoProfile -File C:\\ZetScripts\\zet-new.ps1 -Type inbox -Title "'..title..'"')
-end, { nargs="*" })
-
-vim.api.nvim_create_user_command("ZetMeeting", function(opts)
-  local title = opts.args
-  if title == "" then title = "untitled" end
-  vim.cmd('silent !pwsh -NoProfile -File C:\\ZetScripts\\zet-new.ps1 -Type meeting -Title "'..title..'" -OpenInNvim')
-end, { nargs="*" })
-
-local function zet_prompt(prompt)
-  local t = vim.fn.input(prompt)
-  if t == nil or t == "" then
-    return "untitled"
-  end
-  return t
-end
-
-local function zet_find_created_path(lines)
-  for _, line in ipairs(lines) do
-    line = (line or ""):gsub("\r", "")
-    local p = line:match("^[A-Za-z]:\\.+%.md$")
-    if p then return p end
-  end
-  return ""
-end
-
-local function zet_wait_for_file(path)
-  -- Wait up to two seconds for the file to finish writing
-  local ok = vim.wait(2000, function()
-    return vim.fn.filereadable(path) == 1 and vim.fn.getfsize(path) > 0
-  end, 50)
-  return ok
-end
-
-local function zet_create(note_type, title)
-  local cmd = {
-    "pwsh", "-NoProfile", "-File", "C:\\ZetScripts\\zet-new.ps1",
-    "-Type", note_type,
-    "-Title", title,
-  }
-  local out = vim.fn.systemlist(cmd)
-  return out[#out] or ""
-end
-
-local function zet_new_and_open(note_type)
-  local title = zet_prompt(note_type .. " title: ")
-
-  local out = vim.fn.systemlist({
-    "pwsh","-NoProfile","-ExecutionPolicy","Bypass",
-    "-File","C:\\ZetScripts\\zet-new.ps1",
-    "-Type",note_type,
-    "-Title",title
-  })
-
-  if vim.v.shell_error ~= 0 then
-    vim.notify("Zet: create failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
-    return
-  end
-
-  local raw = zet_find_created_path(out):gsub("\r", "")
-  if raw == "" then
-    vim.notify("Zet: count not parse created path:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
-    return
-  end
-
-  local path = vim.fn.fnamemodify(raw, ":p")
-
-  if not zet_wait_for_file(path) then
-    vim.notify("Zet: file not ready (still emtpy/unreadable):\n" .. path, vim.log.levels.ERROR)
-    return
-  end
-
-  vim.cmd("edit " .. vim.fn.fnameescape(path))
-  vim.cmd("edit!") -- force reload from disk so template shows
-end
-
-local function zet_inbox_capture_only()
-  local title = zet_prompt("inbox title: ")
-  local raw_path = zet_create("inbox", title)
-  if raw_path == "" then
-    vim.notify("Zet: failed to create inbox item", vim.log.levels.ERROR)
-    return
-  end
-
-  -- Do NOT open the file. Just confirm.
-  vim.notify("Zet inbox captured", vim.log.levels.INFO)
-end
-
--- Keymaps
-vim.keymap.set("n", "<leader>zi", zet_inbox_capture_only, { desc = "Zet: inbox capture (no open)" })
-vim.keymap.set("n", "<leader>zn", function() zet_new_and_open("note") end,    { desc = "Zet: new note" })
-vim.keymap.set("n", "<leader>zm", function() zet_new_and_open("meeting") end, { desc = "Zet: new meeting" })
-vim.keymap.set("n", "<leader>zs", function() zet_new_and_open("sync") end,    { desc = "Zet: new sync" })
-vim.keymap.set("n", "<leader>zp", function() zet_new_and_open("project") end, { desc = "Zet: new project" })
-
-
-local function zet_process(to_type)
-  local path = vim.api.nvim_buf_get_name(0)
-  if path == "" then
-    vim.notify("Zet: buffer has no file path", vim.log.levels.ERROR)
-    return
-  end
-  local title = zet_prompt("new title (blank keeps current YAML title): ")
-  local cmd = {
-    "pwsh", "-NoProfile", "-File", "C:\\ZetScripts\\zet-process.ps1",
-    "-Path", path,
-    "-To", to_type,
-  }
-  if title ~= "" and title ~= "untitled" then
-    table.insert(cmd, "-Title")
-    table.insert(cmd, title)
-  end
-  local out = vim.fn.systemlist(cmd)
-  local newpath = out[#out] or ""
-  if newpath == "" then
-    vim.notify("Zet: process failed", vim.log.levels.ERROR)
-    return
-  end
-  vim.cmd("edit " .. vim.fn.fnameescape(newpath))
-end
-
-vim.keymap.set("n", "<leader>zpa", function() zet_process("archive") end, { desc = "Zet: archive current" })
-vim.keymap.set("n", "<leader>zpm", function() zet_process("meeting") end, { desc = "Zet: process -> meeting" })
-vim.keymap.set("n", "<leader>zpp", function() zet_process("project") end, { desc = "Zet: process -> project" })
-vim.keymap.set("n", "<leader>zps", function() zet_process("sync") end,    { desc = "Zet: process -> sync" })
-vim.keymap.set("n", "<leader>zpn", function() zet_process("note") end,    { desc = "Zet: process -> note" })
-
--- Zet (no plugins): inbox picker + process shortcut
--- Requires: C:\ZetScripts\zet-new.ps1 and C:\ZetScripts\zet-process.ps1
--- Optional but recommended: zet-new.ps1 outputs Resolve-Path absolute path.
-
-local function zet_systemlist(args)
-  local out = vim.fn.systemlist(args)
-  return out
-end
-
-local function zet_get_root()
-  -- Pull $ZetRoot from C:\ZetScripts\zet.config.ps1
-  local cmd = {
-    "pwsh", "-NoProfile", "-Command",
-    ". 'C:\\ZetScripts\\zet.config.ps1'; $ZetRoot"
-  }
-  local out = zet_systemlist(cmd)
-  local root = (out[#out] or ""):gsub("\r", "")
-  if root == "" then
-    vim.notify("Zet: failed to read ZetRoot from zet.config.ps1", vim.log.levels.ERROR)
-  end
-  return root
-end
-
-local function zet_path_join(a, b)
-  if a:sub(-1) == "\\" then return a .. b end
-  return a .. "\\" .. b
-end
-
-local function zet_basename(p)
-  return (p:gsub("\\+$", "")):match("([^\\]+)$") or p
-end
-
-local function zet_read_title_from_yaml(path)
-  local ok, lines = pcall(vim.fn.readfile, path)
-  if not ok or not lines then return "" end
-  -- look only in first ~60 lines to avoid loading huge files
-  local max = math.min(#lines, 60)
-  for i = 1, max do
-    local line = lines[i]
-    local t = line:match('^title:%s*"(.*)"%s*$')
-    if t then return t end
-  end
-  return ""
-end
-
-local function zet_list_inbox_files()
-  local root = zet_get_root()
-  if root == "" then return {} end
-
-  local inbox = zet_path_join(root, "Inbox")
-
-  -- Use PowerShell to list files (fast, reliable on Windows, handles spaces).
-  -- Output: full paths, newest first.
-  local cmd = {
-    "pwsh", "-NoProfile", "-Command",
-    string.format("Get-ChildItem -LiteralPath '%s' -File -Filter *.md | Sort-Object LastWriteTime -Descending | ForEach-Object { $_.FullName }", inbox:gsub("'", "''"))
-  }
-
-  local out = zet_systemlist(cmd)
-  local files = {}
-  for _, p in ipairs(out) do
-    p = (p or ""):gsub("\r", "")
-    if p ~= "" then table.insert(files, p) end
-  end
-  return files
-end
-
-local function zet_inbox_picker()
-  local files = zet_list_inbox_files()
-  if #files == 0 then
-    vim.notify("Zet: Inbox is empty (or Inbox folder missing)", vim.log.levels.INFO)
-    return
-  end
-
-  -- Build display entries
-  local items = {}
-  for _, p in ipairs(files) do
-    local base = zet_basename(p)
-    -- nicer label: "yyyyMMddHHmmss - slug" (no .md)
-    local label = base:gsub("%.md$", "")
-    -- show YAML title if present (optional)
-    local yaml_title = zet_read_title_from_yaml(p)
-    if yaml_title ~= "" then
-      label = label .. "  —  " .. yaml_title
-    end
-    table.insert(items, { label = label, path = p })
-  end
-
-  vim.ui.select(items, {
-    prompt = "Zet Inbox (select to open):",
-    format_item = function(item) return item.label end,
-  }, function(choice)
-    if not choice then return end
-    local abs = vim.fn.fnamemodify(choice.path, ":p")
-    vim.cmd("edit " .. vim.fn.fnameescape(abs))
-  end)
-end
-
-local function zet_prompt(prompt, default)
-  local t = vim.fn.input({ prompt = prompt, default = default or "" })
-  if t == nil then return "" end
-  return t
-end
-
-local function zet_find_path(lines)
-  local candidates = {}
-  for _, line in ipairs(lines) do
-    line = (line or ""):gsub("\r", "")
-    local p = line:match("^[A-Za-z]:\\.+%.md$")
-    if p then table.insert(candidates, p) end
-  end
-  -- prefer an existing file
-  for _, p in ipairs(candidates) do
-    if vim.fn.filereadable(p) == 1 then return p end
-  end
-  return candidates[1] or ""
-end
-
-local function zet_read_title_from_yaml(path)
-  local ok, lines = pcall(vim.fn.readfile, path)
-  if not ok or not lines then return "" end
-  local max = math.min(#lines, 60)
-  for i = 1, max do
-    local t = lines[i]:match('^title:%s*"(.*)"%s*$')
-    if t then return t end
-  end
-  return ""
-end
-
-local function zet_prompt(prompt, default)
-  return vim.fn.input({ prompt = prompt, default = default or "" }) or ""
-end
-
-local function zet_process_current()
-  local path = vim.api.nvim_buf_get_name(0)
-  if path == "" then
-    vim.notify("Zet: current buffer has no file path", vim.log.levels.ERROR)
-    return
-  end
-
-  local choices = {
-    { label = "archive", to = "archive" },
-    { label = "note",    to = "note" },
-    { label = "meeting", to = "meeting" },
-    { label = "project", to = "project" },
-    { label = "sync",    to = "sync" },
-  }
-
-  vim.ui.select(choices, {
-    prompt = "Process inbox item →",
-    format_item = function(item) return item.label end,
-  }, function(choice)
-    if not choice then return end
-
-    local current_title = zet_read_title_from_yaml(path)
-    local new_title = zet_prompt("New title (blank keeps current): ", current_title)
-    if new_title == "" then new_title = current_title end
-
-    local cmd = {
-      "pwsh","-NoProfile","-ExecutionPolicy","Bypass",
-      "-File","C:\\ZetScripts\\zet-process.ps1",
-      "-Path", path,
-      "-To", choice.to,
-    }
-    if new_title ~= "" then
-      table.insert(cmd, "-Title")
-      table.insert(cmd, new_title)
-    end
-
-    local out = vim.fn.systemlist(cmd)
-    if vim.v.shell_error ~= 0 then
-      vim.notify("Zet: process failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
-      return
-    end
-
-    local newpath = zet_find_path(out)
-    if newpath == "" then
-      vim.notify("Zet: couldn't parse returned path:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
-      return
-    end
-
-    newpath = vim.fn.fnamemodify(newpath, ":p")
-
-    if vim.fn.filereadable(newpath) ~= 1 then
-      vim.notify("Zet: processed file not found:\n" .. newpath, vim.log.levels.ERROR)
-      return
-    end
-
-    -- Open the moved file (safe API form—avoids ex parsing issues)
-    vim.cmd({ cmd = "edit", args = { newpath } })
-
-    -- Close old buffer after switching
-    local oldbuf = vim.fn.bufnr(path)
-    if oldbuf ~= -1 and oldbuf ~= vim.api.nvim_get_current_buf() then
-      pcall(vim.api.nvim_buf_delete, oldbuf, { force = true })
-    end
-  end)
-end
-
--- Commands
-vim.api.nvim_create_user_command("ZetInbox", zet_inbox_picker, {})
-vim.api.nvim_create_user_command("ZetProcess", zet_process_current, {})
-
--- Keymaps (customize as you like)
--- Telescope-like inbox picker:
-vim.keymap.set("n", "<leader>zf", zet_inbox_picker, { desc = "Zet: Inbox picker" })
-
--- Process current inbox item:
-vim.keymap.set("n", "<leader>zp", zet_process_current, { desc = "Zet: Process current note" })
-
--- Windows safe tem dirs 
+------------------------------------------------------------
+-- Windows-safe temp dirs (keep this; ensure it is ONLY ONCE)
+------------------------------------------------------------
 if vim.fn.has("win32") == 1 then
   local base = vim.fn.stdpath("state")
   local function ensure(p)
-    if vim.fn.isdirectory(p) == 0 then
-      vim.fn.mkdir(p,"p")
-    end
+    if vim.fn.isdirectory(p) == 0 then vim.fn.mkdir(p, "p") end
   end
 
   local swap = base .. "\\swap"
@@ -466,21 +120,111 @@ if vim.fn.has("win32") == 1 then
   vim.opt.undofile = true
   vim.opt.backup = true
   vim.opt.writebackup = true
+end
 
+------------------------------------------------------------
+-- Zet core (single implementation)
+------------------------------------------------------------
+local Zet = {}
+
+Zet.scripts = {
+  new = "C:\\ZetScripts\\zet-new.ps1",
+  process = "C:\\ZetScripts\\zet-process.ps1",
+  archive = "C:\\ZetScripts\\zet-archive.ps1",
+  config = "C:\\ZetScripts\\zet.config.ps1",
+}
+
+local function ps_systemlist(cmd)
+  local out = vim.fn.systemlist(cmd)
+  return out
+end
+
+local function parse_windows_md_path(lines)
+  for _, line in ipairs(lines) do
+    line = (line or ""):gsub("\r", "")
+    local p = line:match("^[A-Za-z]:\\.+%.md$")
+    if p then return p end
+  end
+  return ""
+end
+
+local function prompt_title(prompt)
+  local t = vim.fn.input(prompt)
+  if t == nil or t == "" then return "untitled" end
+  return t
+end
+
+local function wait_for_file(path)
+  return vim.wait(2000, function()
+    return vim.fn.filereadable(path) == 1 and vim.fn.getfsize(path) > 0
+  end, 50)
+end
+
+-- Cache ZetRoot once per session (faster)
+Zet._root = nil
+function Zet.root()
+  if Zet._root and Zet._root ~= "" then return Zet._root end
+  local out = ps_systemlist({
+    "pwsh", "-NoProfile", "-Command",
+    ". '" .. Zet.scripts.config .. "'; $ZetRoot"
+  })
+  Zet._root = (out[#out] or ""):gsub("\r", "")
+  if Zet._root == "" then
+    vim.notify("Zet: failed to read ZetRoot from zet.config.ps1", vim.log.levels.ERROR)
+  end
+  return Zet._root
+end
+
+local function zet_new(note_type, title)
+  local out = ps_systemlist({
+    "pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass",
+    "-File", Zet.scripts.new,
+    "-Type", note_type,
+    "-Title", title,
+  })
+  if vim.v.shell_error ~= 0 then return nil, out end
+  local p = parse_windows_md_path(out)
+  if p == "" then return nil, out end
+  return vim.fn.fnamemodify(p, ":p"), out
+end
+
+local function zet_new_and_open(note_type)
+  local title = prompt_title(note_type .. " title: ")
+  local path, out = zet_new(note_type, title)
+  if not path then
+    vim.notify("Zet: create failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+    return
+  end
+  if not wait_for_file(path) then
+    vim.notify("Zet: file not ready:\n" .. path, vim.log.levels.ERROR)
+    return
+  end
+  vim.cmd({ cmd = "edit", args = { path } })
+  vim.cmd("edit!") -- force disk reload so template shows
+end
+
+local function zet_inbox_capture()
+  local title = prompt_title("inbox title: ")
+  local path, out = zet_new("inbox", title)
+  if not path then
+    vim.notify("Zet: inbox capture failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+    return
+  end
+  vim.notify("Zet: inbox captured", vim.log.levels.INFO)
 end
 
 local function zet_archive_current()
   local buf = vim.api.nvim_get_current_buf()
-  local path = vim.api.nvim_buf_get_name(0)
+  local path = vim.api.nvim_buf_get_name(buf)
   if path == "" then
     vim.notify("Zet: current buffer has no file path", vim.log.levels.ERROR)
     return
   end
 
-  local out = vim.fn.systemlist({
-    "pwsh","-NoProfile","-ExecutionPolicy","Bypass",
-    "-File","C:\\ZetScripts\\zet-archive.ps1",
-    "-Path", path
+  local out = ps_systemlist({
+    "pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass",
+    "-File", Zet.scripts.archive,
+    "-Path", path,
   })
 
   if vim.v.shell_error ~= 0 then
@@ -492,34 +236,69 @@ local function zet_archive_current()
   vim.notify("Zet: archived", vim.log.levels.INFO)
 end
 
-vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive current note" })
+local function zet_process_menu()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    vim.notify("Zet: current buffer has no file path", vim.log.levels.ERROR)
+    return
+  end
 
-local function zet_get_root()
-  local out = vim.fn.systemlist({
-    "pwsh", "-NoProfile", "-Command",
-    ". 'C:\\ZetScripts\\zet.config.ps1'; $ZetRoot"
-  })
-  local root = (out[#out] or ""):gsub("\r", "")
-  return root
+  local choices = {
+    { label = "note",    to = "note" },
+    { label = "meeting", to = "meeting" },
+    { label = "project", to = "project" },
+    { label = "sync",    to = "sync" },
+  }
+
+  vim.ui.select(choices, {
+    prompt = "Process →",
+    format_item = function(i) return i.label end,
+  }, function(choice)
+    if not choice then return end
+
+    local new_title = vim.fn.input("New title (blank = keep): ")
+    local cmd = {
+      "pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass",
+      "-File", Zet.scripts.process,
+      "-Path", path,
+      "-To", choice.to,
+    }
+    if new_title and new_title ~= "" then
+      table.insert(cmd, "-Title")
+      table.insert(cmd, new_title)
+    end
+
+    local out = ps_systemlist(cmd)
+    if vim.v.shell_error ~= 0 then
+      vim.notify("Zet: process failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+      return
+    end
+
+    local newpath = parse_windows_md_path(out)
+    if newpath == "" then
+      vim.notify("Zet: process returned no path:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+      return
+    end
+
+    newpath = vim.fn.fnamemodify(newpath, ":p")
+    vim.cmd({ cmd = "edit", args = { newpath } })
+  end)
 end
 
-local function zet_join(a, b)
-  if a:sub(-1) == "\\" then return a .. b end
-  return a .. "\\" .. b
-end
-
+------------------------------------------------------------
+-- Finder / picker loop (one implementation)
+------------------------------------------------------------
 local function zet_collect(kind, find, limit)
-  local root = zet_get_root()
+  local root = Zet.root()
   if root == "" then return {} end
 
-  local folder_map = {
+  local folders = {
     inbox = "Inbox",
     meetings = "Meetings",
     notes = "Notes",
     projects = "Projects",
     syncs = "Syncs",
     archive = "Archive",
-    recent = nil, -- special
   }
 
   local kinds = {}
@@ -532,7 +311,7 @@ local function zet_collect(kind, find, limit)
   local items = {}
 
   for _, k in ipairs(kinds) do
-    local dir = zet_join(root, folder_map[k])
+    local dir = root .. "\\" .. folders[k]
     local ps = string.format([[
       $dir = '%s'
       if (Test-Path -LiteralPath $dir) {
@@ -543,57 +322,16 @@ local function zet_collect(kind, find, limit)
       }
     ]], dir:gsub("'", "''"), limit)
 
-    local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
+    local out = ps_systemlist({ "pwsh", "-NoProfile", "-Command", ps })
     for _, p in ipairs(out) do
       p = (p or ""):gsub("\r", "")
       if p ~= "" then
-        -- apply filter in Lua (simple substring on filename)
         local name = p:match("([^\\]+)$") or p
-        if (not find) or find == "" or name:lower():find(find:lower(), 1, true) then
+        if find == "" or name:lower():find(find:lower(), 1, true) then
           table.insert(items, { kind = k, path = p, name = name })
         end
       end
     end
-  end
-
-  -- If "recent", we already took "most recent per folder", but not globally sorted.
-  -- We'll global-sort by LastWriteTime using PowerShell once for accuracy:
-  if kind == "recent" then
-    -- build a PS object list with (Path, LastWriteTime), then sort globally
-    local paths = {}
-    for _, it in ipairs(items) do
-      table.insert(paths, it.path)
-    end
-    if #paths == 0 then return {} end
-
-    local ps_paths = table.concat(vim.tbl_map(function(x)
-      return "'" .. x:gsub("'", "''") .. "'"
-    end, paths), ",")
-
-    local ps = string.format([[
-      $paths = @(%s)
-      $paths |
-        ForEach-Object {
-          $p = $_
-          if (Test-Path -LiteralPath $p) {
-            $fi = Get-Item -LiteralPath $p
-            [pscustomobject]@{ Path=$fi.FullName; Name=$fi.Name; Time=$fi.LastWriteTime }
-          }
-        } |
-        Sort-Object Time -Descending |
-        Select-Object -First %d |
-        ForEach-Object { $_.Path }
-    ]], ps_paths, limit)
-
-    local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
-    local final = {}
-    for _, p in ipairs(out) do
-      p = (p or ""):gsub("\r", "")
-      if p ~= "" then
-        table.insert(final, { kind = "recent", path = p, name = p:match("([^\\]+)$") or p })
-      end
-    end
-    return final
   end
 
   return items
@@ -602,25 +340,20 @@ end
 local function zet_picker_loop(kind)
   local limit = 75
   local find = ""
-  local items = {}
 
   while true do
-    items = zet_collect(kind, find, limit)
+    local items = zet_collect(kind, find, limit)
 
-    -- redraw "screen" in Neovim
     vim.cmd("redraw")
-    vim.api.nvim_echo({{""}}, false, {})
     vim.api.nvim_echo({{("Zet %s  |  limit=%d  |  filter=%s"):format(kind, limit, (find ~= "" and find or "(none)")), "Title"}}, false, {})
     vim.api.nvim_echo({{"------------------------------------------------------------", "Comment"}}, false, {})
 
     if #items == 0 then
       vim.api.nvim_echo({{"No matches.", "WarningMsg"}}, false, {})
     else
-      local max_show = math.min(#items, limit)
-      for i = 1, max_show do
+      for i = 1, math.min(#items, limit) do
         local it = items[i]
-        local line = ("%3d) [%s] %s"):format(i, it.kind, it.name)
-        vim.api.nvim_echo({{line}}, false, {})
+        vim.api.nvim_echo({{("%3d) [%s] %s"):format(i, it.kind, it.name)}}, false, {})
       end
     end
 
@@ -634,9 +367,9 @@ local function zet_picker_loop(kind)
     end
 
     if inp == "r" then
-      -- just loop
+      -- refresh
     elseif inp:sub(1,1) == "/" then
-      find = inp:sub(2) -- "/" clears
+      find = inp:sub(2)
     elseif inp:match("^%d+$") then
       local idx = tonumber(inp)
       if idx >= 1 and idx <= #items then
@@ -654,16 +387,23 @@ local function zet_picker_loop(kind)
   end
 end
 
--- Commands
-vim.api.nvim_create_user_command("ZetInboxPick", function() zet_picker_loop("inbox") end, {})
-vim.api.nvim_create_user_command("ZetMeetingsPick", function() zet_picker_loop("meetings") end, {})
-vim.api.nvim_create_user_command("ZetNotesPick", function() zet_picker_loop("notes") end, {})
-vim.api.nvim_create_user_command("ZetProjectsPick", function() zet_picker_loop("projects") end, {})
-vim.api.nvim_create_user_command("ZetSyncsPick", function() zet_picker_loop("syncs") end, {})
-vim.api.nvim_create_user_command("ZetRecentPick", function() zet_picker_loop("recent") end, {})
+------------------------------------------------------------
+-- Keymaps: <leader>z = captures/actions, <leader>f = finds
+------------------------------------------------------------
+-- Captures / actions
+vim.keymap.set("n", "<leader>zi", zet_inbox_capture, { desc = "Zet: inbox capture (no open)" })
+vim.keymap.set("n", "<leader>zm", function() zet_new_and_open("meeting") end, { desc = "Zet: new meeting" })
+vim.keymap.set("n", "<leader>zn", function() zet_new_and_open("note") end,    { desc = "Zet: new note" })
+vim.keymap.set("n", "<leader>zs", function() zet_new_and_open("sync") end,    { desc = "Zet: new sync" })
+vim.keymap.set("n", "<leader>zp", function() zet_new_and_open("project") end, { desc = "Zet: new project" })
 
--- Keymaps (your "zf" request)
-vim.keymap.set("n", "<leader>zf", function() zet_picker_loop("inbox") end, { desc = "Zet: pick inbox item" })
+vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive current (close)" })
+vim.keymap.set("n", "<leader>zx", zet_process_menu,    { desc = "Zet: process current (menu)" })
 
--- Optional: recent across all folders in nvim too
-vim.keymap.set("n", "<leader>zR", function() zet_picker_loop("recent") end, { desc = "Zet: recent (all)" })
+-- Finds / pickers
+vim.keymap.set("n", "<leader>fi", function() zet_picker_loop("inbox") end,    { desc = "Find: inbox" })
+vim.keymap.set("n", "<leader>fm", function() zet_picker_loop("meetings") end, { desc = "Find: meetings" })
+vim.keymap.set("n", "<leader>fn", function() zet_picker_loop("notes") end,    { desc = "Find: notes" })
+vim.keymap.set("n", "<leader>fp", function() zet_picker_loop("projects") end, { desc = "Find: projects" })
+vim.keymap.set("n", "<leader>fs", function() zet_picker_loop("syncs") end,    { desc = "Find: syncs" })
+vim.keymap.set("n", "<leader>fr", function() zet_picker_loop("recent") end,   { desc = "Find: recent (all)" })
