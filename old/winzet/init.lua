@@ -1,3 +1,107 @@
+vim.g.mapleader = " "
+vim.g.maplocalleader = "\\"
+
+vim.cmd.colorscheme("tokyonight-lite")
+vim.api.nvim_set_hl(0, "@markup.heading", { fg = "#7aa2f7", bold = true })
+
+-- Basic Settings
+vim.opt.number = true -- Line numbers
+vim.opt.relativenumber = true -- Relative line numbers
+vim.opt.cursorline = true -- Highlight current line
+vim.opt.scrolloff = 4 -- Keep 10 lines above/below cursor
+vim.opt.wrap = false -- Don't wrap lines
+
+-- Tabbing / Indentation
+vim.opt.tabstop = 2 -- Tab width
+vim.opt.shiftwidth = 2 -- Indent width
+vim.opt.softtabstop = 2 -- Soft tab stop
+vim.opt.expandtab = true -- Use spaces instead of tabs
+vim.opt.smartindent = true -- Smart auto-indenting
+vim.opt.autoindent = true -- Copy indent from current line
+vim.opt.grepprg = "rg --vimgrep" -- Use ripgrep if available
+vim.opt.grepformat = "%f:%l:%c:%m" -- filename, line number, column, content
+
+-- Search Settings
+vim.opt.ignorecase = true -- Case-insensitive search
+vim.opt.smartcase = true -- Case-sensitive if uppercase in search
+vim.opt.hlsearch = false -- Don't highlight search results
+vim.opt.incsearch = true -- Show matches as you type
+
+-- Visual Settings
+vim.opt.termguicolors = true -- Enable 24-bit colors
+vim.opt.signcolumn = "yes" -- Always show sign column
+vim.opt.colorcolumn = "80" -- Show column at 100 characters
+vim.opt.showmatch = true -- Highlight matching brackets
+vim.opt.matchtime = 2 -- How long to show matching bracket
+vim.opt.lazyredraw = false -- redraw while executing macros (butter UX)
+vim.opt.redrawtime = 10000 -- Timeout for syntax highlighting redraw
+vim.opt.maxmempattern = 20000 -- Max memory for pattern matching
+vim.opt.synmaxcol = 300 -- Syntax highlighting column limit
+
+-- File Handling
+vim.opt.backup = false -- Don't create backup files
+vim.opt.writebackup = false -- Don't backup before overwriting
+vim.opt.swapfile = false -- Don't create swap files
+vim.opt.undofile = true -- Persistent undo
+vim.opt.updatetime = 300 -- Time in ms to trigger CursorHold
+vim.opt.timeoutlen = 500 -- Time in ms to wait for mapped sequence
+vim.opt.ttimeoutlen = 0 -- No wait for key code sequences
+vim.opt.autoread = true -- Auto-reload file if changed outside
+vim.opt.autowrite = false -- Don't auto-save on some events
+
+-- Behavior Settings
+vim.opt.errorbells = false -- Disable error sounds
+vim.opt.backspace = "indent,eol,start" -- Make backspace behave naturally
+vim.opt.mouse = "a" -- Enable mouse support
+vim.opt.clipboard = ("unnamedplus") -- Use system clipboard
+
+-- Split Behavior
+vim.opt.splitbelow = true -- Horizontal splits open below
+vim.opt.splitright = true -- Vertical splits open to the rightet number
+
+vim.o.shell = "powershell.exe"
+
+-- Buffer navigation
+vim.keymap.set("n", "<leader>bn", "<Cmd>bnext<CR>", { desc = "Next buffer" })
+vim.keymap.set("n", "<leader>bp", "<Cmd>bprevious<CR>", { desc = "Previous buffer" })
+
+-- Better window navigation
+vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
+vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to bottom window" })
+vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to top window" })
+vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
+
+-- Splitting & Resizing
+vim.keymap.set("n", "<leader>sv", "<Cmd>vsplit<CR>", { desc = "Split window vertically" })
+vim.keymap.set("n", "<leader>sh", "<Cmd>split<CR>", { desc = "Split window horizontally" })
+vim.keymap.set("n", "<C-Up>", "<Cmd>resize +2<CR>", { desc = "Increase window height" })
+vim.keymap.set("n", "<C-Down>", "<Cmd>resize -2<CR>", { desc = "Decrease window height" })
+vim.keymap.set("n", "<C-Left>", "<Cmd>vertical resize -2<CR>", { desc = "Decrease window width" })
+vim.keymap.set("n", "<C-Right>", "<Cmd>vertical resize +2<CR>", { desc = "Increase window width" })
+
+-- Better indenting in visual mode
+vim.keymap.set("v", "<", "<gv", { desc = "Indent left and reselect" })
+vim.keymap.set("v", ">", ">gv", { desc = "Indent right and reselect" })
+
+-- Better J behavior
+vim.keymap.set("n", "J", "mzJ`z", { desc = "Join lines and keep cursor position" })
+
+-- Clear search highlight
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
+
+-- Highlight the yanked text for 200ms
+local highlight_yank_group = vim.api.nvim_create_augroup("HighlightYank", {})
+vim.api.nvim_create_autocmd("TextYankPost", {
+	group = highlight_yank_group,
+	pattern = "*",
+	callback = function()
+		vim.hl.on_yank({
+			higroup = "IncSearch",
+			timeout = 200,
+		})
+	end,
+})
+
 vim.api.nvim_create_user_command("ZetInbox", function(opts)
   local title = opts.args
   if title == "" then title = "untitled" end
@@ -18,6 +122,23 @@ local function zet_prompt(prompt)
   return t
 end
 
+local function zet_find_created_path(lines)
+  for _, line in ipairs(lines) do
+    line = (line or ""):gsub("\r", "")
+    local p = line:match("^[A-Za-z]:\\.+%.md$")
+    if p then return p end
+  end
+  return ""
+end
+
+local function zet_wait_for_file(path)
+  -- Wait up to two seconds for the file to finish writing
+  local ok = vim.wait(2000, function()
+    return vim.fn.filereadable(path) == 1 and vim.fn.getfsize(path) > 0
+  end, 50)
+  return ok
+end
+
 local function zet_create(note_type, title)
   local cmd = {
     "pwsh", "-NoProfile", "-File", "C:\\ZetScripts\\zet-new.ps1",
@@ -30,15 +151,34 @@ end
 
 local function zet_new_and_open(note_type)
   local title = zet_prompt(note_type .. " title: ")
-  local raw_path = zet_create(note_type, title)
-  if raw_path == "" then
-    vim.notify("Zet: failed to create " .. note_type, vim.log.levels.ERROR)
+
+  local out = vim.fn.systemlist({
+    "pwsh","-NoProfile","-ExecutionPolicy","Bypass",
+    "-File","C:\\ZetScripts\\zet-new.ps1",
+    "-Type",note_type,
+    "-Title",title
+  })
+
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Zet: create failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
     return
   end
 
-  -- Expand ~ just in case (shouldn't be needed if Resolve-Path is in zet-new.ps1)
-  local path = vim.fn.expand(raw_path)
+  local raw = zet_find_created_path(out):gsub("\r", "")
+  if raw == "" then
+    vim.notify("Zet: count not parse created path:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+    return
+  end
+
+  local path = vim.fn.fnamemodify(raw, ":p")
+
+  if not zet_wait_for_file(path) then
+    vim.notify("Zet: file not ready (still emtpy/unreadable):\n" .. path, vim.log.levels.ERROR)
+    return
+  end
+
   vim.cmd("edit " .. vim.fn.fnameescape(path))
+  vim.cmd("edit!") -- force reload from disk so template shows
 end
 
 local function zet_inbox_capture_only()
@@ -91,6 +231,7 @@ vim.keymap.set("n", "<leader>zpm", function() zet_process("meeting") end, { desc
 vim.keymap.set("n", "<leader>zpp", function() zet_process("project") end, { desc = "Zet: process -> project" })
 vim.keymap.set("n", "<leader>zps", function() zet_process("sync") end,    { desc = "Zet: process -> sync" })
 vim.keymap.set("n", "<leader>zpn", function() zet_process("note") end,    { desc = "Zet: process -> note" })
+
 -- Zet (no plugins): inbox picker + process shortcut
 -- Requires: C:\ZetScripts\zet-new.ps1 and C:\ZetScripts\zet-process.ps1
 -- Optional but recommended: zet-new.ps1 outputs Resolve-Path absolute path.
@@ -184,7 +325,8 @@ local function zet_inbox_picker()
     format_item = function(item) return item.label end,
   }, function(choice)
     if not choice then return end
-    vim.cmd("edit " .. vim.fn.fnameescape(choice.path))
+    local abs = vim.fn.fnamemodify(choice.path, ":p")
+    vim.cmd("edit " .. vim.fn.fnameescape(abs))
   end)
 end
 
@@ -300,7 +442,35 @@ vim.keymap.set("n", "<leader>zf", zet_inbox_picker, { desc = "Zet: Inbox picker"
 -- Process current inbox item:
 vim.keymap.set("n", "<leader>zp", zet_process_current, { desc = "Zet: Process current note" })
 
+-- Windows safe tem dirs 
+if vim.fn.has("win32") == 1 then
+  local base = vim.fn.stdpath("state")
+  local function ensure(p)
+    if vim.fn.isdirectory(p) == 0 then
+      vim.fn.mkdir(p,"p")
+    end
+  end
+
+  local swap = base .. "\\swap"
+  local undo = base .. "\\undo"
+  local backup = base .. "\\backup"
+  local view = base .. "\\view"
+
+  ensure(swap); ensure(undo); ensure(backup); ensure(view)
+
+  vim.opt.directory = { swap .. "\\\\", "." }
+  vim.opt.undodir = { undo }
+  vim.opt.backupdir = { backup }
+  vim.opt.viewdir = view
+
+  vim.opt.undofile = true
+  vim.opt.backup = true
+  vim.opt.writebackup = true
+
+end
+
 local function zet_archive_current()
+  local buf = vim.api.nvim_get_current_buf()
   local path = vim.api.nvim_buf_get_name(0)
   if path == "" then
     vim.notify("Zet: current buffer has no file path", vim.log.levels.ERROR)
@@ -318,21 +488,8 @@ local function zet_archive_current()
     return
   end
 
-  -- Find the returned path (should be exactly one line)
-  local newpath = (out[#out] or ""):gsub("\r", "")
-  if newpath == "" then
-    vim.notify("Zet: archive returned empty path", vim.log.levels.ERROR)
-    return
-  end
-
-  vim.cmd({ cmd = "edit", args = { newpath } })
-
-  -- Close old buffer if still around
-  local oldbuf = vim.fn.bufnr(path)
-  if oldbuf ~= -1 and oldbuf ~= vim.api.nvim_get_current_buf() then
-    pcall(vim.api.nvim_buf_delete, oldbuf, { force = true })
-  end
+  vim.api.nvim_buf_delete(buf, { force = true })
+  vim.notify("Zet: archived", vim.log.levels.INFO)
 end
 
 vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive current note" })
-
