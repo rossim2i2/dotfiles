@@ -194,6 +194,35 @@ local function zet_prompt(prompt, default)
   return t
 end
 
+local function zet_find_path(lines)
+  local candidates = {}
+  for _, line in ipairs(lines) do
+    line = (line or ""):gsub("\r", "")
+    local p = line:match("^[A-Za-z]:\\.+%.md$")
+    if p then table.insert(candidates, p) end
+  end
+  -- prefer an existing file
+  for _, p in ipairs(candidates) do
+    if vim.fn.filereadable(p) == 1 then return p end
+  end
+  return candidates[1] or ""
+end
+
+local function zet_read_title_from_yaml(path)
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or not lines then return "" end
+  local max = math.min(#lines, 60)
+  for i = 1, max do
+    local t = lines[i]:match('^title:%s*"(.*)"%s*$')
+    if t then return t end
+  end
+  return ""
+end
+
+local function zet_prompt(prompt, default)
+  return vim.fn.input({ prompt = prompt, default = default or "" }) or ""
+end
+
 local function zet_process_current()
   local path = vim.api.nvim_buf_get_name(0)
   if path == "" then
@@ -219,9 +248,9 @@ local function zet_process_current()
     local new_title = zet_prompt("New title (blank keeps current): ", current_title)
     if new_title == "" then new_title = current_title end
 
-    -- Build pwsh command
     local cmd = {
-      "pwsh", "-NoProfile", "-File", "C:\\ZetScripts\\zet-process.ps1",
+      "pwsh","-NoProfile","-ExecutionPolicy","Bypass",
+      "-File","C:\\ZetScripts\\zet-process.ps1",
       "-Path", path,
       "-To", choice.to,
     }
@@ -230,18 +259,33 @@ local function zet_process_current()
       table.insert(cmd, new_title)
     end
 
-    local out = zet_systemlist(cmd)
-    local newpath = (out[#out] or ""):gsub("\r", "")
-
-    if newpath == "" then
-      vim.notify("Zet: process failed (no path returned)", vim.log.levels.ERROR)
+    local out = vim.fn.systemlist(cmd)
+    if vim.v.shell_error ~= 0 then
+      vim.notify("Zet: process failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
       return
     end
 
-    -- Open the moved file, and wipe the old buffer
-    local oldbuf = vim.api.nvim_get_current_buf()
-    vim.cmd("edit " .. vim.fn.fnameescape(newpath))
-    pcall(vim.api.nvim_buf_delete, oldbuf, { force = true })
+    local newpath = zet_find_path(out)
+    if newpath == "" then
+      vim.notify("Zet: couldn't parse returned path:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+      return
+    end
+
+    newpath = vim.fn.fnamemodify(newpath, ":p")
+
+    if vim.fn.filereadable(newpath) ~= 1 then
+      vim.notify("Zet: processed file not found:\n" .. newpath, vim.log.levels.ERROR)
+      return
+    end
+
+    -- Open the moved file (safe API form—avoids ex parsing issues)
+    vim.cmd({ cmd = "edit", args = { newpath } })
+
+    -- Close old buffer after switching
+    local oldbuf = vim.fn.bufnr(path)
+    if oldbuf ~= -1 and oldbuf ~= vim.api.nvim_get_current_buf() then
+      pcall(vim.api.nvim_buf_delete, oldbuf, { force = true })
+    end
   end)
 end
 
