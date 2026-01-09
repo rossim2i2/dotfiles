@@ -1,7 +1,7 @@
 -- ============================================================
 -- init.lua (plugin-free Zet workflow on Windows)
 --  - <leader>z... = capture/actions
---  - <leader>f... = find/pickers (with preview + Esc to exit)
+--  - <leader>f... = find/pickers (current tab + preview pane)
 -- ============================================================
 
 ------------------------------------------------------------
@@ -97,7 +97,7 @@ if vim.fn.has("win32") == 1 then
 end
 
 ------------------------------------------------------------
--- Quality of life keymaps
+-- Quality-of-life keymaps
 ------------------------------------------------------------
 -- Buffer navigation
 vim.keymap.set("n", "<leader>bn", "<Cmd>bnext<CR>", { desc = "Next buffer" })
@@ -120,7 +120,7 @@ vim.keymap.set("v", ">", ">gv", { desc = "Indent right + reselect" })
 -- Better J
 vim.keymap.set("n", "J", "mzJ`z", { desc = "Join lines keep cursor" })
 
--- Clear search highlight
+-- Clear search highlight (global)
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
 
 -- Yank highlight
@@ -295,11 +295,11 @@ local function zet_process_menu()
 end
 
 -- ============================================================
--- Finder UI (preview pane + Esc quits)
+-- Finder UI (current tab, preview split, Esc quits)
 -- ============================================================
 
 local function buf_scratch(name)
-  local b = vim.api.nvim_create_buf(false, true)
+  local b = vim.api.nvim_create_buf(false, true) -- listed=false, scratch=true
   vim.api.nvim_buf_set_name(b, name)
   vim.bo[b].buftype = "nofile"
   vim.bo[b].bufhidden = "wipe"
@@ -318,6 +318,7 @@ local function basename(p)
   return (p:gsub("\\+$", "")):match("([^\\]+)$") or p
 end
 
+-- PowerShell list: outputs "kind|fullpath" sorted globally by LastWriteTimeUtc
 local function ps_list(kind, limit)
   local root = Zet.root()
   if root == "" then return {} end
@@ -338,11 +339,10 @@ local function ps_list(kind, limit)
     kinds = { kind }
   end
 
-  -- Build one PowerShell command that returns: Kind|FullPath (sorted globally by LastWriteTime)
-  local dir_lines = {}
+  local specs = {}
   for _, k in ipairs(kinds) do
     local d = root .. "\\" .. folders[k]
-    table.insert(dir_lines, ("@{Kind='%s'; Dir='%s'}"):format(k, d:gsub("'", "''")))
+    table.insert(specs, ("@{Kind='%s'; Dir='%s'}"):format(k, d:gsub("'", "''")))
   end
 
   local ps = ([[
@@ -365,9 +365,9 @@ local function ps_list(kind, limit)
       Sort-Object Time -Descending |
       Select-Object -First %d |
       ForEach-Object { "$($_.Kind)|$($_.Path)" }
-  ]]):format(table.concat(dir_lines, ",\n      "), limit)
+  ]]):format(table.concat(specs, ",\n      "), limit)
 
-  local out = ps_systemlist({ "pwsh", "-NoProfile", "-Command", ps })
+  local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
   local items = {}
   for _, line in ipairs(out) do
     line = (line or ""):gsub("\r", "")
@@ -382,55 +382,47 @@ local function ps_list(kind, limit)
 end
 
 local function open_picker(kind)
-  -- If we started on the intro/empty buffer, replace it with a real buffer so UI feels clean
-  if vim.api.nvim_buf_get_name(0) == "" and vim.bo.buftype == "" then
-    vim.cmd("enew")
-  end
+  -- Save where we started
+  local orig_win = vim.api.nvim_get_current_win()
+  local orig_buf = vim.api.nvim_get_current_buf()
+  local orig_view = vim.fn.winsaveview()
 
   local state = {
     kind = kind,
-    limit = 100,
+    limit = 120,
     find = "",
     items = {},
     idx = 1,
-    tab = vim.api.nvim_get_current_tabpage(),
+    orig_win = orig_win,
+    orig_buf = orig_buf,
+    orig_view = orig_view,
+    list_win = orig_win,
     list_buf = nil,
-    prev_buf = nil,
-    list_win = nil,
     prev_win = nil,
-    aug = nil,
+    prev_buf = nil,
   }
 
-  -- New tab for modal feel (easy quit)
-  vim.cmd("tabnew")
-  local picker_tab = vim.api.nvim_get_current_tabpage()
-
-  -- Left: list, Right: preview
-  vim.cmd("vsplit")
-  state.list_win = vim.api.nvim_get_current_win()
-  state.list_buf = buf_scratch("ZetList")
-  vim.api.nvim_win_set_buf(state.list_win, state.list_buf)
-
-  vim.cmd("wincmd l")
-  state.prev_win = vim.api.nvim_get_current_win()
-  state.prev_buf = buf_scratch("ZetPreview")
-  vim.api.nvim_win_set_buf(state.prev_win, state.prev_buf)
-
-  -- Window options
-  vim.wo[state.list_win].number = false
-  vim.wo[state.list_win].relativenumber = false
-  vim.wo[state.list_win].cursorline = true
-  vim.wo[state.prev_win].number = false
-  vim.wo[state.prev_win].relativenumber = false
-  vim.wo[state.prev_win].wrap = false
+  local function cleanup()
+    if state.prev_win and vim.api.nvim_win_is_valid(state.prev_win) then
+      pcall(vim.api.nvim_win_close, state.prev_win, true)
+    end
+    if vim.api.nvim_win_is_valid(state.orig_win) then
+      pcall(vim.api.nvim_set_current_win, state.orig_win)
+      if vim.api.nvim_buf_is_valid(state.orig_buf) then
+        pcall(vim.api.nvim_win_set_buf, state.orig_win, state.orig_buf)
+        pcall(vim.fn.winrestview, state.orig_view)
+      end
+    end
+  end
 
   local function render_list()
     local header = {
       ("Zet Find: %s   limit=%d   filter=%s"):format(state.kind, state.limit, (state.find ~= "" and state.find or "(none)")),
       "------------------------------------------------------------",
-      "j/k = move   Enter = open   / = set filter   r = refresh   Esc/q = quit",
+      "j/k or arrows = move   Enter = open   / = filter   r = refresh   Esc/q = quit",
       "",
     }
+
     local lines = {}
     for _, h in ipairs(header) do table.insert(lines, h) end
 
@@ -444,13 +436,12 @@ local function open_picker(kind)
     end
 
     set_buf_lines(state.list_buf, lines)
-
-    -- Keep cursor on the selected line (header is 4 lines; first item starts at 5)
     local row = 4 + math.max(state.idx, 1)
     pcall(vim.api.nvim_win_set_cursor, state.list_win, { row, 0 })
   end
 
   local function render_preview()
+    if not (state.prev_buf and vim.api.nvim_buf_is_valid(state.prev_buf)) then return end
     if #state.items == 0 then
       set_buf_lines(state.prev_buf, { "No preview." })
       return
@@ -462,10 +453,7 @@ local function open_picker(kind)
       return
     end
 
-    local lines = {}
-    table.insert(lines, it.path)
-    table.insert(lines, "------------------------------------------------------------")
-
+    local lines = { it.path, "------------------------------------------------------------" }
     local ok, file_lines = pcall(vim.fn.readfile, it.path)
     if not ok or not file_lines then
       table.insert(lines, "(Could not read file)")
@@ -474,56 +462,27 @@ local function open_picker(kind)
     end
 
     local max = math.min(#file_lines, 120)
-    for i = 1, max do
-      table.insert(lines, file_lines[i])
-    end
-    if #file_lines > max then
-      table.insert(lines, "…")
-    end
-
+    for i = 1, max do table.insert(lines, file_lines[i]) end
+    if #file_lines > max then table.insert(lines, "…") end
     set_buf_lines(state.prev_buf, lines)
   end
 
   local function refresh()
     local items = ps_list(state.kind, state.limit)
+
     if state.find ~= "" then
       local f = state.find:lower()
       local filtered = {}
       for _, it in ipairs(items) do
-        if it.name:lower():find(f, 1, true) then
-          table.insert(filtered, it)
-        end
+        if it.name:lower():find(f, 1, true) then table.insert(filtered, it) end
       end
       items = filtered
     end
+
     state.items = items
-    if #state.items == 0 then
-      state.idx = 1
-    else
-      state.idx = math.min(state.idx, #state.items)
-      state.idx = math.max(state.idx, 1)
-    end
+    state.idx = (#state.items == 0) and 1 or math.max(1, math.min(state.idx, #state.items))
     render_list()
     render_preview()
-  end
-
-  local function quit()
-    -- close picker tab (brings you back where you were)
-    if vim.api.nvim_tabpage_is_valid(picker_tab) then
-      vim.cmd("tabclose")
-    end
-  end
-
-  local function open_selected()
-    if #state.items == 0 then return end
-    local it = state.items[state.idx]
-    if not it or it.path == "" then return end
-    local p = vim.fn.fnamemodify(it.path, ":p")
-    -- Close picker tab, then open file
-    quit()
-    vim.schedule(function()
-      vim.cmd({ cmd = "edit", args = { p } })
-    end)
   end
 
   local function move(delta)
@@ -533,42 +492,93 @@ local function open_picker(kind)
     render_preview()
   end
 
-  -- Local keymaps in list buffer
-  local opts = { buffer = state.list_buf, nowait = true, silent = true }
+  local function open_selected()
+    if #state.items == 0 then return end
+    local it = state.items[state.idx]
+    if not it or it.path == "" then return end
 
-  vim.keymap.set("n", "j", function() move(1) end, opts)
-  vim.keymap.set("n", "k", function() move(-1) end, opts)
-  vim.keymap.set("n", "<Down>", function() move(1) end, opts)
-  vim.keymap.set("n", "<Up>", function() move(-1) end, opts)
+    local p = vim.fn.fnamemodify(it.path, ":p")
 
-  vim.keymap.set("n", "<CR>", open_selected, opts)
+    if state.prev_win and vim.api.nvim_win_is_valid(state.prev_win) then
+      pcall(vim.api.nvim_win_close, state.prev_win, true)
+      state.prev_win = nil
+    end
 
-  -- ESC and q exit
-  vim.keymap.set("n", "<Esc>", quit, opts)
-  vim.keymap.set("n", "q", quit, opts)
+    if vim.api.nvim_win_is_valid(state.list_win) then
+      vim.api.nvim_set_current_win(state.list_win)
+      vim.cmd({ cmd = "edit", args = { p } })
+    end
+  end
 
-  -- refresh
-  vim.keymap.set("n", "r", refresh, opts)
+  local function quit()
+    cleanup()
+  end
 
-  -- filter prompt
-  vim.keymap.set("n", "/", function()
-    local newf = vim.fn.input("Filter (blank clears): ", state.find)
-    if newf == nil then return end
-    state.find = newf
-    state.idx = 1
+  local ok, err = pcall(function()
+    -- Replace intro/empty buffer so UI doesn't feel like it's "behind" the picker
+    if vim.api.nvim_buf_get_name(0) == "" and vim.bo.buftype == "" then
+      vim.cmd("enew")
+    end
+
+    -- List buffer in current window
+    state.list_buf = buf_scratch("ZetList")
+    vim.api.nvim_win_set_buf(state.list_win, state.list_buf)
+
+    -- Preview split to the right
+    vim.cmd("vsplit")
+    state.prev_win = vim.api.nvim_get_current_win()
+    state.prev_buf = buf_scratch("ZetPreview")
+    vim.api.nvim_win_set_buf(state.prev_win, state.prev_buf)
+
+    -- Go back to list window
+    vim.cmd("wincmd h")
+    state.list_win = vim.api.nvim_get_current_win()
+
+    -- Window opts
+    vim.wo[state.list_win].number = false
+    vim.wo[state.list_win].relativenumber = false
+    vim.wo[state.list_win].cursorline = true
+
+    vim.wo[state.prev_win].number = false
+    vim.wo[state.prev_win].relativenumber = false
+    vim.wo[state.prev_win].wrap = false
+
+    -- Buffer-local keymaps (only active in picker list buffer)
+    local mapopts = { buffer = state.list_buf, nowait = true, silent = true }
+
+    vim.keymap.set("n", "j", function() move(1) end, mapopts)
+    vim.keymap.set("n", "k", function() move(-1) end, mapopts)
+    vim.keymap.set("n", "<Down>", function() move(1) end, mapopts)
+    vim.keymap.set("n", "<Up>", function() move(-1) end, mapopts)
+
+    vim.keymap.set("n", "<CR>", open_selected, mapopts)
+
+    -- ESC exits picker (buffer-local override)
+    vim.keymap.set("n", "<Esc>", quit, mapopts)
+    vim.keymap.set("n", "q", quit, mapopts)
+
+    vim.keymap.set("n", "r", refresh, mapopts)
+
+    vim.keymap.set("n", "/", function()
+      local newf = vim.fn.input("Filter (blank clears): ", state.find)
+      if newf == nil then return end
+      state.find = newf
+      state.idx = 1
+      refresh()
+    end, mapopts)
+
     refresh()
-  end, opts)
+  end)
 
-  -- Initial load
-  refresh()
-
-  -- Put focus on list
-  vim.api.nvim_set_current_win(state.list_win)
+  if not ok then
+    cleanup()
+    vim.notify("Picker error: " .. tostring(err), vim.log.levels.ERROR)
+  end
 end
 
-------------------------------------------------------------
+-- ============================================================
 -- Keymaps: <leader>z = captures/actions
-------------------------------------------------------------
+-- ============================================================
 vim.keymap.set("n", "<leader>zi", zet_inbox_capture, { desc = "Zet: inbox capture (no open)" })
 vim.keymap.set("n", "<leader>zm", function() zet_new_and_open("meeting") end, { desc = "Zet: new meeting" })
 vim.keymap.set("n", "<leader>zn", function() zet_new_and_open("note") end,    { desc = "Zet: new note" })
@@ -577,9 +587,9 @@ vim.keymap.set("n", "<leader>zp", function() zet_new_and_open("project") end, { 
 vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive current (close)" })
 vim.keymap.set("n", "<leader>zx", zet_process_menu,    { desc = "Zet: process current (menu)" })
 
-------------------------------------------------------------
+-- ============================================================
 -- Keymaps: <leader>f = find/pickers (preview)
-------------------------------------------------------------
+-- ============================================================
 vim.keymap.set("n", "<leader>fi", function() open_picker("inbox") end,    { desc = "Find: inbox (preview)" })
 vim.keymap.set("n", "<leader>fm", function() open_picker("meetings") end, { desc = "Find: meetings (preview)" })
 vim.keymap.set("n", "<leader>fn", function() open_picker("notes") end,    { desc = "Find: notes (preview)" })
