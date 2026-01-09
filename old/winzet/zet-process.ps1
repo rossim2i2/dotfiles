@@ -65,18 +65,32 @@ function Get-YamlBlock([string]$content) {
 }
 
 function Get-YamlField([string]$yaml, [string]$key) {
-  $m = [regex]::Match($yaml, "(?m)^\s*$([regex]::Escape($key)):\s*`"?(.*?)`"?\s*$")
-  if ($m.Success) { return $m.Groups[2].Value }
+  $escapedKey = [regex]::Escape($key)
+
+  $pattern = '(?m)^\s*' + $escapedKey + '\s*:\s*"?(^"]*)"?\s*$'
+
+  $m = [regex]::Match($yaml, $pattern)
+  if ($m.Success) { return $m.Groups[1].Value }
   return ''
 }
 
 function Set-YamlField([string]$yaml, [string]$key, [string]$value) {
-  $escaped = $value -replace '"','\"'
-  if ([regex]::IsMatch($yaml, "(?m)^\s*$([regex]::Escape($key)):\s*")) {
-    return [regex]::Replace($yaml, "(?m)^\s*$([regex]::Escape($key)):\s*.*$", "$key: `"$escaped`"")
+  $escapedValue = $value -replace '"','\"'
+  $escapedKey = [regex]::Escape($key)
+
+  $pattern = "(?m)^\s*$escapedKey\s*:\s*.*$"
+  $replacement = '{0}: "{1}"' -f $key, $escapedValue
+
+  if ([regex]::IsMatch($yaml, $pattern)) {
+    return [regex]::Replace($yaml, $pattern, $replacement)
   }
+
+  if ($yaml -notmatch '(?m)^---\s*$'){
+    return $yaml + "`r`n" + $replacement + "`r`n"
+  }
+
   # insert before closing ---
-  return [regex]::Replace($yaml, "(?m)^---\s*$", "---", 1) + "`r`n$key: `"$escaped`""
+  return [regex]::Replace($yaml, '(?m)^---\s*$', "$replacement`r`n---", 1)
 }
 
 function Replace-TagsBlock([string]$yaml, [string[]]$tags) {
@@ -132,13 +146,13 @@ if ($yaml -notmatch '---\s*$') { $yaml = ($yaml.TrimEnd() + "`r`n---`r`n") }
 # Create new file path
 $slug = New-Slug -s $Title -maxLen $MaxSlugLen
 $destDir = Type-Folder -Root $ZetRoot -t $To
-$destName = "$id - $slug.md"
+$destName = "$id-$slug.md"
 $destPath = Join-Path $destDir $destName
 
 # Avoid collision
 $counter = 2
 while (Test-Path $destPath) {
-  $destName = "$id - $slug-$counter.md"
+  $destName = "$id-$slug-$counter.md"
   $destPath = Join-Path $destDir $destName
   $counter++
 }
