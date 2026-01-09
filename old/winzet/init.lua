@@ -687,7 +687,7 @@ local function open_fuzzy_picker()
     return {
       bufname = "ZetFuzzy",
       prevname = "ZetFuzzyPreview",
-      help = "j/k move | Enter open | /=set query | r refresh | Esc quit",
+      help = "j/k move | Enter open | /set query | r refresh | Esc quit",
       title = function()
         return ("Fuzzy (rg): contents+filename | top=%d | query=%s"):format(
           fuzzy.topn,
@@ -774,18 +774,25 @@ local function open_fuzzy_picker()
 
       -- Add buffer-local mapping: "=" sets fuzzy query (so "/" remains label filter if you want it)
       install_keymaps = function(buf, refresh)
-        vim.keymap.set("n", "=", function()
-          local newq = vim.fn.input("Fuzzy query (blank clears): ", fuzzy.query)
-          if newq == nil then return end
-          fuzzy.query = newq
-          refresh()
-        end, { buffer = buf, nowait = true, silent = true })
+  local function set_query()
+    local newq = vim.fn.input("Fuzzy query (blank clears): ", fuzzy.query)
+    if newq == nil then return end
+    fuzzy.query = newq
+    refresh()
+  end
 
-        vim.keymap.set("n", "r", function()
-          fuzzy.file_pool = nil
-          refresh()
-        end, { buffer = buf, nowait = true, silent = true })
-      end,
+  -- Make "/" set the fuzzy query (what you expect)
+  vim.keymap.set("n", "/", set_query, { buffer = buf, nowait = true, silent = true })
+
+  -- Keep "=" as an alternate
+  vim.keymap.set("n", "=", set_query, { buffer = buf, nowait = true, silent = true })
+
+  vim.keymap.set("n", "r", function()
+    fuzzy.file_pool = nil
+    refresh()
+  end, { buffer = buf, nowait = true, silent = true })
+end,
+
     }
   end)
 end
