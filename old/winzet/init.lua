@@ -299,3 +299,40 @@ vim.keymap.set("n", "<leader>zf", zet_inbox_picker, { desc = "Zet: Inbox picker"
 
 -- Process current inbox item:
 vim.keymap.set("n", "<leader>zp", zet_process_current, { desc = "Zet: Process current note" })
+
+local function zet_archive_current()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    vim.notify("Zet: current buffer has no file path", vim.log.levels.ERROR)
+    return
+  end
+
+  local out = vim.fn.systemlist({
+    "pwsh","-NoProfile","-ExecutionPolicy","Bypass",
+    "-File","C:\\ZetScripts\\zet-archive.ps1",
+    "-Path", path
+  })
+
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Zet: archive failed:\n" .. table.concat(out, "\n"), vim.log.levels.ERROR)
+    return
+  end
+
+  -- Find the returned path (should be exactly one line)
+  local newpath = (out[#out] or ""):gsub("\r", "")
+  if newpath == "" then
+    vim.notify("Zet: archive returned empty path", vim.log.levels.ERROR)
+    return
+  end
+
+  vim.cmd({ cmd = "edit", args = { newpath } })
+
+  -- Close old buffer if still around
+  local oldbuf = vim.fn.bufnr(path)
+  if oldbuf ~= -1 and oldbuf ~= vim.api.nvim_get_current_buf() then
+    pcall(vim.api.nvim_buf_delete, oldbuf, { force = true })
+  end
+end
+
+vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive current note" })
+
