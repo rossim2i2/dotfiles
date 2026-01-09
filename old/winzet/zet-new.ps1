@@ -12,7 +12,16 @@ param(
   [switch]$OpenInNvim
 )
 
-. "C:\ZetScripts\zet.config.ps1"
+Set-StrictMode -Version Latest
+$ErrorActionPreferance = 'Stop'
+
+# Always load config from teh same folder as this script
+$configPath = Join-Path $PSScriptRoot 'zet.config.ps1'
+if (-not (Test-Path $configPath)) {
+    throw "Missing config file: $configPath"
+  }
+
+. @configPath
 
 function Ensure-Folders {
   param([string]$Root)
@@ -96,13 +105,13 @@ $createdIso = $now.ToString('yyyy-MM-ddTHH:mm:ssK')
 $slug = New-Slug -s $Title -maxLen $MaxSlugLen
 
 $folder = Type-Folder -Root $ZetRoot -t $Type
-$filename = "$id - $slug.md"
+$filename = "$id-$slug.md"
 $path = Join-Path $folder $filename
 
 # Avoid collision (rare, but possible if you create multiple in same second)
 $counter = 2
 while (Test-Path $path) {
-  $filename = "$id - $slug-$counter.md"
+  $filename = "$id-$slug-$counter.md"
   $path = Join-Path $folder $filename
   $counter++
 }
@@ -113,8 +122,17 @@ $body = New-Body -type $Type
 # Write UTF-8 without BOM
 [System.IO.File]::WriteAllText($path, $fm + $body, (New-Object System.Text.UTF8Encoding($false)))
 
-# Print the created path (useful for chaining)
-$path
+if (-not (Test-Path -LiteralPath $path)) {
+    throw "Expected file was not created: $path"
+}
+
+$len = (Get-Item -LiteralPath $path).Length
+if ($len -lt 10) {
+    throw "File created but apprears empty (Lenght=$len): $path"
+}
+
+# Print ohe created path (useful for chaining)
+(Resolve-Path -LiteralPath $path).Path
 
 if ($OpenInNvim) {
   & nvim $path
