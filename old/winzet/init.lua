@@ -493,3 +493,177 @@ local function zet_archive_current()
 end
 
 vim.keymap.set("n", "<leader>za", zet_archive_current, { desc = "Zet: archive current note" })
+
+local function zet_get_root()
+  local out = vim.fn.systemlist({
+    "pwsh", "-NoProfile", "-Command",
+    ". 'C:\\ZetScripts\\zet.config.ps1'; $ZetRoot"
+  })
+  local root = (out[#out] or ""):gsub("\r", "")
+  return root
+end
+
+local function zet_join(a, b)
+  if a:sub(-1) == "\\" then return a .. b end
+  return a .. "\\" .. b
+end
+
+local function zet_collect(kind, find, limit)
+  local root = zet_get_root()
+  if root == "" then return {} end
+
+  local folder_map = {
+    inbox = "Inbox",
+    meetings = "Meetings",
+    notes = "Notes",
+    projects = "Projects",
+    syncs = "Syncs",
+    archive = "Archive",
+    recent = nil, -- special
+  }
+
+  local kinds = {}
+  if kind == "recent" then
+    kinds = { "inbox", "meetings", "notes", "projects", "syncs", "archive" }
+  else
+    kinds = { kind }
+  end
+
+  local items = {}
+
+  for _, k in ipairs(kinds) do
+    local dir = zet_join(root, folder_map[k])
+    local ps = string.format([[
+      $dir = '%s'
+      if (Test-Path -LiteralPath $dir) {
+        Get-ChildItem -LiteralPath $dir -File -Filter *.md |
+          Sort-Object LastWriteTime -Descending |
+          Select-Object -First %d |
+          ForEach-Object { $_.FullName }
+      }
+    ]], dir:gsub("'", "''"), limit)
+
+    local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
+    for _, p in ipairs(out) do
+      p = (p or ""):gsub("\r", "")
+      if p ~= "" then
+        -- apply filter in Lua (simple substring on filename)
+        local name = p:match("([^\\]+)$") or p
+        if (not find) or find == "" or name:lower():find(find:lower(), 1, true) then
+          table.insert(items, { kind = k, path = p, name = name })
+        end
+      end
+    end
+  end
+
+  -- If "recent", we already took "most recent per folder", but not globally sorted.
+  -- We'll global-sort by LastWriteTime using PowerShell once for accuracy:
+  if kind == "recent" then
+    -- build a PS object list with (Path, LastWriteTime), then sort globally
+    local paths = {}
+    for _, it in ipairs(items) do
+      table.insert(paths, it.path)
+    end
+    if #paths == 0 then return {} end
+
+    local ps_paths = table.concat(vim.tbl_map(function(x)
+      return "'" .. x:gsub("'", "''") .. "'"
+    end, paths), ",")
+
+    local ps = string.format([[
+      $paths = @(%s)
+      $paths |
+        ForEach-Object {
+          $p = $_
+          if (Test-Path -LiteralPath $p) {
+            $fi = Get-Item -LiteralPath $p
+            [pscustomobject]@{ Path=$fi.FullName; Name=$fi.Name; Time=$fi.LastWriteTime }
+          }
+        } |
+        Sort-Object Time -Descending |
+        Select-Object -First %d |
+        ForEach-Object { $_.Path }
+    ]], ps_paths, limit)
+
+    local out = vim.fn.systemlist({ "pwsh", "-NoProfile", "-Command", ps })
+    local final = {}
+    for _, p in ipairs(out) do
+      p = (p or ""):gsub("\r", "")
+      if p ~= "" then
+        table.insert(final, { kind = "recent", path = p, name = p:match("([^\\]+)$") or p })
+      end
+    end
+    return final
+  end
+
+  return items
+end
+
+local function zet_picker_loop(kind)
+  local limit = 75
+  local find = ""
+  local items = {}
+
+  while true do
+    items = zet_collect(kind, find, limit)
+
+    -- redraw "screen" in Neovim
+    vim.cmd("redraw")
+    vim.api.nvim_echo({{""}}, false, {})
+    vim.api.nvim_echo({{("Zet %s  |  limit=%d  |  filter=%s"):format(kind, limit, (find ~= "" and find or "(none)")), "Title"}}, false, {})
+    vim.api.nvim_echo({{"------------------------------------------------------------", "Comment"}}, false, {})
+
+    if #items == 0 then
+      vim.api.nvim_echo({{"No matches.", "WarningMsg"}}, false, {})
+    else
+      local max_show = math.min(#items, limit)
+      for i = 1, max_show do
+        local it = items[i]
+        local line = ("%3d) [%s] %s"):format(i, it.kind, it.name)
+        vim.api.nvim_echo({{line}}, false, {})
+      end
+    end
+
+    vim.api.nvim_echo({{""}}, false, {})
+    vim.api.nvim_echo({{"Commands: number=open | /text=set filter | /=clear | r=refresh | q=quit", "Comment"}}, false, {})
+
+    local inp = vim.fn.input("Select: ")
+    if inp == nil or inp == "" or inp == "q" then
+      vim.cmd("redraw")
+      return
+    end
+
+    if inp == "r" then
+      -- just loop
+    elseif inp:sub(1,1) == "/" then
+      find = inp:sub(2) -- "/" clears
+    elseif inp:match("^%d+$") then
+      local idx = tonumber(inp)
+      if idx >= 1 and idx <= #items then
+        local path = vim.fn.fnamemodify(items[idx].path, ":p")
+        vim.cmd({ cmd = "edit", args = { path } })
+        return
+      else
+        vim.api.nvim_echo({{"Out of range. Press Enter...", "WarningMsg"}}, false, {})
+        vim.fn.input("")
+      end
+    else
+      vim.api.nvim_echo({{"Invalid input. Press Enter...", "WarningMsg"}}, false, {})
+      vim.fn.input("")
+    end
+  end
+end
+
+-- Commands
+vim.api.nvim_create_user_command("ZetInboxPick", function() zet_picker_loop("inbox") end, {})
+vim.api.nvim_create_user_command("ZetMeetingsPick", function() zet_picker_loop("meetings") end, {})
+vim.api.nvim_create_user_command("ZetNotesPick", function() zet_picker_loop("notes") end, {})
+vim.api.nvim_create_user_command("ZetProjectsPick", function() zet_picker_loop("projects") end, {})
+vim.api.nvim_create_user_command("ZetSyncsPick", function() zet_picker_loop("syncs") end, {})
+vim.api.nvim_create_user_command("ZetRecentPick", function() zet_picker_loop("recent") end, {})
+
+-- Keymaps (your "zf" request)
+vim.keymap.set("n", "<leader>zf", function() zet_picker_loop("inbox") end, { desc = "Zet: pick inbox item" })
+
+-- Optional: recent across all folders in nvim too
+vim.keymap.set("n", "<leader>zR", function() zet_picker_loop("recent") end, { desc = "Zet: recent (all)" })
