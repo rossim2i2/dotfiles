@@ -42,3 +42,143 @@ function za {
   pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetArchive -Path $Path | Out-Null
   "Archived: $Path"
 }
+
+# --- Zet interactive picker (multi-folder + loop) ---
+. 'C:\ZetScripts\zet.config.ps1'
+
+function zet-folder([Parameter(Mandatory)][ValidateSet('inbox','meetings','notes','projects','syncs','archive')]$Kind) {
+  switch ($Kind) {
+    'inbox'    { Join-Path $ZetRoot 'Inbox' }
+    'meetings' { Join-Path $ZetRoot 'Meetings' }
+    'notes'    { Join-Path $ZetRoot 'Notes' }
+    'projects' { Join-Path $ZetRoot 'Projects' }
+    'syncs'    { Join-Path $ZetRoot 'Syncs' }
+    'archive'  { Join-Path $ZetRoot 'Archive' }
+  }
+}
+
+function zet-collect {
+  param(
+    [Parameter(Mandatory)][string[]]$Kinds,
+    [string]$Find = '',
+    [int]$Limit = 75
+  )
+
+  $all = foreach ($k in $Kinds) {
+    $dir = zet-folder $k
+    if (Test-Path -LiteralPath $dir) {
+      Get-ChildItem -LiteralPath $dir -File -Filter *.md -ErrorAction SilentlyContinue |
+        ForEach-Object {
+          [pscustomobject]@{
+            Kind = $k
+            Name = $_.Name
+            Path = $_.FullName
+            LastWriteTime = $_.LastWriteTime
+          }
+        }
+    }
+  }
+
+  if ($Find) {
+    $all = $all | Where-Object {
+      $_.Name -like "*$Find*"
+    }
+  }
+
+  $all |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First $Limit
+}
+
+function zet-open-loop {
+  param(
+    [Parameter(Mandatory)][string[]]$Kinds,
+    [string]$Title = 'Zet Recent',
+    [int]$Limit = 75,
+    [switch]$PrintOnly
+  )
+
+  $find = ''
+  $items = @()
+
+  while ($true) {
+    $items = zet-collect -Kinds $Kinds -Find $find -Limit $Limit
+
+    Clear-Host
+    Write-Host $Title
+    Write-Host ("Folders: {0}" -f ($Kinds -join ", "))
+    Write-Host ("Limit:   {0}" -f $Limit)
+    Write-Host ("Filter:  {0}" -f ($(if ($find) { $find } else { '(none)' })))
+    Write-Host "------------------------------------------------------------"
+
+    if (-not $items -or $items.Count -eq 0) {
+      Write-Host "No matches."
+    } else {
+      $i = 1
+      foreach ($it in $items) {
+        $stamp = $it.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+        "{0,3}) [{1,-8}] {2}   [{3}]" -f $i, $it.Kind, $it.Name, $stamp
+        $i++
+      }
+    }
+
+    Write-Host ""
+    Write-Host "Type:"
+    Write-Host "  - number to open"
+    Write-Host "  - /text to set filter (e.g. /standup)"
+    Write-Host "  - / to clear filter"
+    Write-Host "  - r to refresh"
+    Write-Host "  - Enter to quit"
+    Write-Host ""
+
+    $inp = Read-Host "Select"
+    if ([string]::IsNullOrWhiteSpace($inp)) { break }
+
+    if ($inp -eq 'r') { continue }
+
+    if ($inp.StartsWith('/')) {
+      $find = $inp.Substring(1)  # "/foo" -> "foo", "/" -> ""
+      continue
+    }
+
+    if (-not ($inp -match '^\d+$')) {
+      Write-Host "Invalid input. Press Enter..."
+      [void](Read-Host)
+      continue
+    }
+
+    $idx = [int]$inp
+    if ($idx -lt 1 -or $idx -gt $items.Count) {
+      Write-Host "Out of range. Press Enter..."
+      [void](Read-Host)
+      continue
+    }
+
+    $path = $items[$idx - 1].Path
+
+    if ($PrintOnly) {
+      $path
+      break
+    } else {
+      & nvim $path
+      # After exiting nvim, return to the list (keep filter)
+      continue
+    }
+  }
+}
+
+# Recent across all Zet folders
+function zor {
+  param(
+    [int]$Limit = 75
+  )
+  zet-open-loop -Kinds @('inbox','meetings','notes','projects','syncs','archive') -Title "Zet Recent (all)" -Limit $Limit
+}
+
+# (Optional) scoped interactive pickers too
+function zoi { param([int]$Limit = 75) zet-open-loop -Kinds @('inbox')    -Title "Zet Inbox"    -Limit $Limit }
+function zom { param([int]$Limit = 75) zet-open-loop -Kinds @('meetings') -Title "Zet Meetings" -Limit $Limit }
+function zon { param([int]$Limit = 75) zet-open-loop -Kinds @('notes')    -Title "Zet Notes"    -Limit $Limit }
+function zop { param([int]$Limit = 75) zet-open-loop -Kinds @('projects') -Title "Zet Projects" -Limit $Limit }
+function zos { param([int]$Limit = 75) zet-open-loop -Kinds @('syncs')    -Title "Zet Syncs"    -Limit $Limit }
+function zoa { param([int]$Limit = 75) zet-open-loop -Kinds @('archive')  -Title "Zet Archive"  -Limit $Limit }
