@@ -1,0 +1,44 @@
+# --- Zet shortcuts (PowerShell 7 profile) ---
+$ZetScripts = 'C:\ZetScripts'
+$ZetNew     = Join-Path $ZetScripts 'zet-new.ps1'
+$ZetArchive = Join-Path $ZetScripts 'zet-archive.ps1'
+$ZetProcess = Join-Path $ZetScripts 'zet-process.ps1'
+
+function zet-title([string]$prompt = 'Title') {
+  $t = Read-Host $prompt
+  if ([string]::IsNullOrWhiteSpace($t)) { return 'untitled' }
+  return $t
+}
+
+function zi {
+  $t = zet-title 'Inbox title'
+  pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetNew -Type inbox -Title $t | Out-Null
+  "Captured inbox: $t"
+}
+
+function zn {
+  $t = zet-title 'Note title'
+  pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetNew -Type note -Title $t
+}
+
+function zm {
+  $t = zet-title 'Meeting title'
+  pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetNew -Type meeting -Title $t
+}
+
+function zp {
+  $t = zet-title 'Project title'
+  pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetNew -Type project -Title $t
+}
+
+function zs {
+  $t = zet-title 'Sync title'
+  pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetNew -Type sync -Title $t
+}
+
+# Archive a specific file path (paste path, or drag-drop file into terminal to paste)
+function za {
+  param([Parameter(Mandatory)][string]$Path)
+  pwsh -NoProfile -ExecutionPolicy Bypass -File $ZetArchive -Path $Path | Out-Null
+  "Archived: $Path"
+}
