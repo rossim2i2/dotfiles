@@ -791,6 +791,140 @@ local function open_fuzzy_picker()
 end
 
 -- ============================================================
+-- Filename pickers (fi/fm/fn/fp/fs) using rg --files
+--   - searches ONLY filenames (not contents)
+--   - preview split shows file head
+--   - "=" sets filename query (fuzzy)
+-- ============================================================
+
+local function rg_files_in_dir(dir)
+  local out = rg_systemlist({ "rg", "--files", "--", dir })
+  local files = {}
+  for _, line in ipairs(out) do
+    line = (line or ""):gsub("\r", "")
+    if line ~= "" and line:match("%.md$") then
+      files[#files + 1] = line
+    end
+  end
+  return files
+end
+
+local function open_filename_picker(kind)
+  local root = Zet.root()
+  if root == "" then return end
+
+  local dir_map = {
+    inbox = root .. "\\Inbox",
+    meetings = root .. "\\Meetings",
+    notes = root .. "\\Notes",
+    projects = root .. "\\Projects",
+    syncs = root .. "\\Syncs",
+  }
+
+  local dir = dir_map[kind]
+  if not dir then
+    vim.notify("Zet: unknown kind: " .. tostring(kind), vim.log.levels.ERROR)
+    return
+  end
+
+  local state_local = {
+    query = "",
+    topn = 25,       -- you said top 25 is enough
+    pool = nil,      -- cached file list
+  }
+
+  open_list_picker(function()
+    return {
+      bufname = "ZetPick_" .. kind,
+      prevname = "ZetPickPreview_" .. kind,
+      help = "j/k move | Enter open | = query filename | / filter list | r refresh | Esc quit",
+      title = function()
+        return ("Pick %s by filename | top=%d | query=%s"):format(
+          kind,
+          state_local.topn,
+          (state_local.query ~= "" and state_local.query or "(set with =)")
+        )
+      end,
+
+      build_items = function()
+        if not state_local.pool then
+          state_local.pool = rg_files_in_dir(dir)
+        end
+
+        local q = state_local.query
+        if q == "" then
+          -- If no query, just show most recent-ish by name (your filenames start with timestamp)
+          -- We'll sort descending by filename (works because yyyyMMddHHmmss prefix)
+          local copy = vim.tbl_extend("force", {}, state_local.pool)
+          table.sort(copy, function(a, b) return a > b end)
+          local items = {}
+          for i = 1, math.min(#copy, state_local.topn) do
+            local p = copy[i]
+            items[#items + 1] = { label = basename(p), path = p, lnum = 1 }
+          end
+          return items
+        end
+
+        -- Fuzzy score against basename only
+        local scored = {}
+        for _, p in ipairs(state_local.pool) do
+          local s = fuzzy_score(q, basename(p))
+          if s > 0 then
+            scored[#scored + 1] = { path = p, score = s }
+          end
+        end
+
+        table.sort(scored, function(a, b)
+          if a.score == b.score then return a.path < b.path end
+          return a.score > b.score
+        end)
+
+        local items = {}
+        for i = 1, math.min(#scored, state_local.topn) do
+          local it = scored[i]
+          items[#items + 1] = {
+            label = ("%s  (score=%d)"):format(basename(it.path), it.score),
+            path = it.path,
+            lnum = 1,
+          }
+        end
+        return items
+      end,
+
+      preview = function(item)
+        local ok, lines = pcall(vim.fn.readfile, item.path)
+        if not ok or not lines then
+          return { item.path, "------------------------------------------------------------", "(Could not read file)" }
+        end
+        local out = { item.path, "------------------------------------------------------------" }
+        local max = math.min(#lines, 120)
+        for i = 1, max do out[#out + 1] = lines[i] end
+        if #lines > max then out[#out + 1] = "…" end
+        return out
+      end,
+
+      on_open = function(item)
+        vim.cmd({ cmd = "edit", args = { vim.fn.fnamemodify(item.path, ":p") } })
+      end,
+
+      install_keymaps = function(buf, refresh)
+        vim.keymap.set("n", "=", function()
+          local newq = vim.fn.input("Filename query (blank clears): ", state_local.query)
+          if newq == nil then return end
+          state_local.query = newq
+          refresh()
+        end, { buffer = buf, nowait = true, silent = true })
+
+        vim.keymap.set("n", "r", function()
+          state_local.pool = nil
+          refresh()
+        end, { buffer = buf, nowait = true, silent = true })
+      end,
+    }
+  end)
+end
+
+-- ============================================================
 -- Keymaps: <leader>z = captures/actions
 -- ============================================================
 vim.keymap.set("n", "<leader>zi", zet_inbox_capture, { desc = "Zet: inbox capture (no open)" })
@@ -816,3 +950,10 @@ end, { desc = "Find: open action items by @person" })
 vim.keymap.set("n", "<leader>fx", function() open_actions_picker("done", nil) end, { desc = "Find: done action items" })
 
 vim.keymap.set("n", "<leader>fg", open_fuzzy_picker, { desc = "Find: fuzzy (rg contents + filename)" })
+vim.keymap.set("n", "<leader>fi", function() open_filename_picker("inbox") end,    { desc = "Find: inbox (filename picker)" })
+vim.keymap.set("n", "<leader>fm", function() open_filename_picker("meetings") end, { desc = "Find: meetings (filename picker)" })
+vim.keymap.set("n", "<leader>fn", function() open_filename_picker("notes") end,    { desc = "Find: notes (filename picker)" })
+vim.keymap.set("n", "<leader>fp", function() open_filename_picker("projects") end, { desc = "Find: projects (filename picker)" })
+vim.keymap.set("n", "<leader>fs", function() open_filename_picker("syncs") end,    { desc = "Find: syncs (filename picker)" })
+-- keep your existing <leader>fr (recent) mapping as-is (PS sorted by time)
+
