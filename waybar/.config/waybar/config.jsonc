@@ -11,8 +11,6 @@
     ],
     "modules-right": [
       "custom/temp",
-      "pulseaudio",
-      // "tray",
       "custom/power"
     ],
     "clock": {
