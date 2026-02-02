@@ -67,10 +67,15 @@ function Get-YamlBlock([string]$content) {
 function Get-YamlField([string]$yaml, [string]$key) {
   $escapedKey = [regex]::Escape($key)
 
-  $pattern = '(?m)^\s*' + $escapedKey + '\s*:\s*"?(^"]*)"?\s*$'
+  # Captures values like:
+  #   id: 20260101123456
+  #   title: "Some Title"
+  #   title: Some Title
+  # Stops at end-of-line (does not try to parse complex YAML)
+  $pattern = '(?m)^\s*' + $escapedKey + '\s*:\s*"?([^"\r\n]*)"?\s*$'
 
   $m = [regex]::Match($yaml, $pattern)
-  if ($m.Success) { return $m.Groups[1].Value }
+  if ($m.Success) { return $m.Groups[1].Value.Trim() }
   return ''
 }
 
